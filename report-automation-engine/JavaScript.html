@@ -1,0 +1,177 @@
+
+// --- GLOBAL STATE ---
+let allCohortsData = {}; // Stores the full { cohort: [companies] } map
+let availableCompanies = new Set(); // Stores a Set of companies available for searching
+
+// --- ON PAGE LOAD ---
+window.addEventListener('load', function() {
+    logMessage('Loading initial data...');
+    // Fetch all necessary data in one go
+    google.script.run.withSuccessHandler(populateInitialUI).withFailureHandler(showError).getInitialData();
+});
+
+// --- UI POPULATION & INITIALIZATION ---
+// THIS IS THE CORRECTED FUNCTION
+function populateInitialUI(data) {
+    // Check if the data received is an object and has keys.
+    // The 'error' property is a special case from our backend.
+    if (!data || typeof data !== 'object' || data.error || Object.keys(data).length === 0) {
+        const errorMessage = data.error ? data.error : "Failed to load cohort data from the server or the COHORTS property is empty.";
+        showError({ message: errorMessage });
+        document.getElementById('cohort-list').innerHTML = '<p>No cohorts found. Please run the HubSpot import or a setup function.</p>';
+        return;
+    }
+
+    allCohortsData = data;
+
+    populateCohorts(Object.keys(allCohortsData));
+
+    logMessage('Cohorts loaded. Selecting all by default...');
+    selectAllCohorts(true);
+
+    logMessage(' Initial data loaded successfully.');
+}
+
+
+function populateCohorts(cohortNames) {
+    const cohortListDiv = document.getElementById('cohort-list');
+    cohortListDiv.innerHTML = ''; // Clear 'Loading...' message
+
+    if (cohortNames.length === 0) {
+        cohortListDiv.innerHTML = '<p>No cohorts found. Please run the HubSpot import.</p>';
+        return;
+    }
+
+    cohortNames.sort().forEach(name => {
+        const checkboxId = `cohort-${name.replace(/[^a-zA-Z0-9]/g, '-')}`; // Make ID more robust
+        const item = document.createElement('div');
+        item.className = 'checkbox-item';
+        item.innerHTML = `
+            <input type="checkbox" id="${checkboxId}" value="${name}" onchange="handleCohortChange()">
+            <label for="${checkboxId}">${name}</label>
+        `;
+        cohortListDiv.appendChild(item);
+    });
+}
+
+// --- EVENT HANDLERS & LOGIC ---
+
+function selectAllCohorts(shouldSelect) {
+    const checkboxes = document.querySelectorAll('#cohort-list input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = shouldSelect);
+    handleCohortChange(); // Trigger update after changing selection
+}
+
+function handleCohortChange() {
+    const checkedCohorts = Array.from(document.querySelectorAll('#cohort-list input:checked')).map(cb => cb.value);
+    
+    // Rebuild the set of available companies
+    availableCompanies.clear();
+    checkedCohorts.forEach(cohortName => {
+        if (allCohortsData[cohortName]) {
+            allCohortsData[cohortName].forEach(company => availableCompanies.add(company));
+        }
+    });
+
+    updateCompanySuggestions();
+    logMessage(`Updated company list: ${availableCompanies.size} companies available for selection.`);
+}
+
+function updateCompanySuggestions() {
+    const datalist = document.getElementById('company-suggestions');
+    datalist.innerHTML = ''; // Clear old suggestions
+    const sortedCompanies = Array.from(availableCompanies).sort();
+    sortedCompanies.forEach(companyName => {
+        const option = document.createElement('option');
+        option.value = companyName;
+        datalist.appendChild(option);
+    });
+}
+
+function handleCompanySelection(inputElement) {
+    const companyName = inputElement.value.trim();
+    if (companyName && availableCompanies.has(companyName)) {
+        addCompanyPill(companyName);
+        inputElement.value = ''; // Clear the input for the next search
+    }
+}
+
+function addCompanyPill(companyName) {
+    const pillList = document.getElementById('selected-companies-list');
+
+    // Prevent duplicate pills
+    const existingPills = Array.from(pillList.querySelectorAll('.company-pill')).map(p => p.dataset.company);
+    if (existingPills.includes(companyName)) {
+        logMessage(`Info: ${companyName} is already selected.`);
+        return;
+    }
+    
+    const pill = document.createElement('div');
+    pill.className = 'company-pill';
+    pill.dataset.company = companyName;
+    pill.textContent = companyName;
+
+    const removeBtn = document.createElement('span');
+    removeBtn.className = 'remove-pill';
+    removeBtn.innerHTML = '×'; // 'x' symbol
+    removeBtn.onclick = () => pill.remove();
+    
+    pill.appendChild(removeBtn);
+    pillList.appendChild(pill);
+}
+
+function startProcess() {
+    const runBtn = document.getElementById('run-btn');
+    const runHubspotCheckbox = document.getElementById('run-hubspot-script');
+    const runPdfCheckbox = document.getElementById('run-pdf-script');
+
+    if (!runHubspotCheckbox.checked && !runPdfCheckbox.checked) {
+        alert('Please select at least one process to run.');
+        return;
+    }
+
+    // Get selected companies from the pills
+    const selectedCompanies = Array.from(document.querySelectorAll('.company-pill')).map(pill => pill.dataset.company);
+    
+    if (runPdfCheckbox.checked && selectedCompanies.length === 0) {
+        alert('Please select at least one company to process for the PDF extraction.');
+        return;
+    }
+
+    const processOptions = {
+        companies: selectedCompanies,
+        runHubspot: runHubspotCheckbox.checked,
+        runPdf: runPdfCheckbox.checked
+    };
+
+    runBtn.disabled = true;
+    logMessage('\n--- Starting New Process ---');
+    
+    google.script.run
+        .withSuccessHandler(function(logOutput) {
+            logMessage(logOutput);
+            logMessage('\n --- Process Complete ---');
+            runBtn.disabled = false;
+        })
+        .withFailureHandler(function(error) {
+            showError(error);
+            runBtn.disabled = false;
+        })
+        .runProcesses(processOptions);
+}
+
+
+// --- UTILITY FUNCTIONS ---
+function logMessage(message) {
+    const log = document.getElementById('status-log');
+    const timestamp = new Date().toLocaleTimeString();
+    log.innerHTML += `[${timestamp}] ${message}\n`;
+    log.scrollTop = log.scrollHeight; // Auto-scroll to bottom
+}
+
+function showError(error) {
+    const log = document.getElementById('status-log');
+    const timestamp = new Date().toLocaleTimeString();
+    log.innerHTML += `\n<span style="color: #f00;">[${timestamp}] ERROR: ${error.message}</span>\n`;
+    log.scrollTop = log.scrollHeight;
+}
