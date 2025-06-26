@@ -161,9 +161,9 @@ function getFormatCompanyFundingPrompt(extractedText){
   `
 }
 
-function getSynthesizeFinalCompanyPrompt(companyName, companyWebsite, hubspotRow, internalRow, geminiRow) {
+function getSynthesizeFinalCompanyPrompt(companyName, companyWebsite, internalRow, hubspotRow, geminiRow) {
 
-  data = formatDataForSynthesis(hubspotRow, internalRow, geminiRow);
+  data = formatDataForSynthesis(internalRow, hubspotRow, geminiRow);
 
   return `
     **Persona:** You are a senior venture capital analyst. Your specialty is synthesizing incomplete and potentially conflicting data from multiple sources to build a clear, actionable investment thesis.

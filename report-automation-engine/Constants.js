@@ -27,6 +27,7 @@ function getGeminiApiKey() {
 // --- Sheet Configuration ---
 const MASTER_SHEET = 'Master Sheet'; // Name of the sheet to update/create
 const ROW = 3; // Starting row for company data
+const COMPANY_UPDATE_ROW = 2;
 const GEMINI_ROW = 4;
 const ROW_SPACING = 3; // Rows to skip between company entries (e.g., if each company takes 3 rows)
 

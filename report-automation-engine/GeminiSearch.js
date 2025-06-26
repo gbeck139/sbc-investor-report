@@ -22,30 +22,34 @@ function getAllCompanies(sheet) {
   const companies = [];
   const nameColumnLetter = COLUMN_MAPPINGS['Name'];
   const websiteColumnLetter = COLUMN_MAPPINGS['Website'];
+  const sectorColumnLetter = COLUMN_MAPPINGS['Sector'];
 
   // Determine the numerical index for the website column within the read range (e.g., D is 3 if A is 0)
   const websiteColumnIndexInReadRange = websiteColumnLetter.charCodeAt(0) - nameColumnLetter.charCodeAt(0);
+  const sectorColumnIndexInReadRange = sectorColumnLetter.charCodeAt(0) - nameColumnLetter.charCodeAt(0);
 
   // Determine the last row with content in the name column
   const lastRow = sheet.getLastRow();
   
   // Read a range that covers all potential company rows from the name column to the website column
-  const rangeToRead = sheet.getRange(`${nameColumnLetter}${2}:${websiteColumnLetter}${lastRow}`);
+  const rangeToRead = sheet.getRange(`${nameColumnLetter}${COMPANY_UPDATE_ROW}:${websiteColumnLetter}${lastRow}`);
   const values = rangeToRead.getValues(); // Get all values in the specified A:D range
   for (let i = 0; i < values.length; i++) {
-    const currentRowInSheet = GEMINI_ROW + i; // The actual row number in the sheet (e.g., 3, 4, 5, 6...)
+    const currentRowInSheet = i+COMPANY_UPDATE_ROW; // The actual row number in the sheet (e.g., 3, 4, 5, 6...)
     
     // Check if it's a "company header row" based on ROW_SPACING
     // For your setup (ROW=3, ROW_SPACING=3), this is true for rows 3, 6, 9, etc.
-    if ((currentRowInSheet - GEMINI_ROW) % ROW_SPACING === 0) {
+    if (currentRowInSheet % ROW_SPACING === 0) {
       const name = values[i][0] ? String(values[i][0]).trim() : ''; // Data from the first column in the read range (A)
       const website = values[i][websiteColumnIndexInReadRange] ? String(values[i][websiteColumnIndexInReadRange]).trim() : ''; // Data from the website column in the read range (D)
+      const sector = values[i][sectorColumnIndexInReadRange] ? String(values[i][sectorColumnIndexInReadRange]).trim() : '';
       Logger.log(`${values[i]}`);
       // Only add to list if company name exists
       if (name !== '') {
         companies.push({
           name: name,
           website: website,
+          sector: sector,
           sheetRow: currentRowInSheet
         });
       }
@@ -97,7 +101,7 @@ function fillAllCompanies() {
 function fillCompany(company, sheet) {
   const companyName = company.name;
   const companyWebsite = company.website;
-  const currentRow = company.sheetRow;
+  const currentRow = company.sheetRow+(GEMINI_ROW-ROW);
 
   Logger.log(`Processing company ${companyName} (${companyWebsite}) at row ${currentRow}`);
 

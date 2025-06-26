@@ -3,12 +3,15 @@ function test(){
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
   const name = "Pencil";
   const company = getSingleCompany(sheet, name);
-  fillCompany(company, sheet)
-  synthPrompt = getSynthesizeFinalCompanyPrompt(company.name, company.website, 72, 71, 73);
+  Logger.log(company.sheetRow)
+  
+  // fillCompany(company, sheet)
+
+  synthPrompt = getSynthesizeFinalCompanyPrompt(company.name, company.website, company.sheetRow-1, company.sheetRow, company.sheetRow+1);
   data = callGeminiAPI("gemini-2.5-pro", synthPrompt, false);
   result = callGeminiAPI("gemini-2.0-flash", getFormatFinalCompanyPrompt(data));
   parsed = JSON.parse(result);
-  parseAndWriteGeminiSearchOutput(spreadsheet.getSheetByName("Final Sheet"), parsed, Math.floor((71-2)/3)+2);
+  parseAndWriteGeminiFinalOutput(spreadsheet.getSheetByName("Final Sheet"), parsed, Math.floor((company.sheetRow-ROW)/ROW_SPACING)+COMPANY_UPDATE_ROW, company);
   Logger.log(result);
 }
 

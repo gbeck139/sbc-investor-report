@@ -2,7 +2,7 @@
  * Main function to prepare data for the final "Synthesizer" model.
  * It reads data from three specified rows and assembles it into a final JSON object.
  */
-function formatDataForSynthesis(hubspotRow, internalRow, geminiRow) {
+function formatDataForSynthesis(internalRow, hubspotRow, geminiRow) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
 
@@ -95,4 +95,115 @@ function readRowData(sheet, row) {
   }
 
   return data;
+}
+
+function parseAndWriteGeminiFinalOutput(sheet, parsedData, row, company) {
+  if (company.name) {
+    writeToCell(sheet, 'Name', row, company.name);
+  }
+
+  if (company.website) {
+    writeToCell(sheet, 'Website', row, company.website);
+  }
+
+  if (company.sector) {
+    writeToCell(sheet, 'Sector', row, company.sector);
+  }
+  // --- Qualitative Data ---
+  if (parsedData.companySummary) {
+    writeToCell(sheet, 'Company Summary', row, parsedData.companySummary);
+  }
+  if (parsedData.businessModel) {
+    // Assuming businessModel is a simple object like {description: "..."}
+    writeToCell(sheet, 'Business Model', row, parsedData.businessModel);
+  }
+  if (parsedData.keyDifferentiators) {
+    // Pass the entire array of objects directly to writeToCell
+    writeToCell(sheet, 'Key Differentiators', row, parsedData.keyDifferentiators);
+  }
+  if (parsedData.recentHighlightsAndNews) {
+    writeToCell(sheet, 'Recent Highlights and News', row, parsedData.recentHighlightsAndNews);
+  }
+  if (parsedData.strategicFocus) {
+    writeToCell(sheet, 'Strategic Focus', row, parsedData.strategicFocus);
+  }
+  if (parsedData.risks) {
+    writeToCell(sheet, 'Risks', row, parsedData.risks);
+  }
+  if (parsedData.founderCommentary) {
+      writeToCell(sheet, 'Founder Commentary', row, parsedData.founderCommentary);
+  }
+   if (parsedData.fundCommentary) {
+      writeToCell(sheet, 'Fund Commentary', row, parsedData.fundCommentary);
+  }
+
+  // --- Quantitative Data (Metrics) ---
+   if (parsedData.currentValuation) {
+      writeToCell(sheet, 'Current Valuation', row, parsedData.currentValuation);
+  }
+   if (parsedData.arr) {
+      writeToCell(sheet, 'ARR (Annual Recurring Revenue)', row, parsedData.arr);
+  }
+   if (parsedData.grossProfit) {
+      writeToCell(sheet, 'Gross Profit', row, parsedData.grossProfit);
+  }
+   if (parsedData.cashRunway) {
+      writeToCell(sheet, 'Runway', row, parsedData.cashRunway);
+  }
+   if (parsedData.employeeCount) {
+      writeToCell(sheet, 'Employee Count', row, parsedData.employeeCount);
+  }
+    if (parsedData.customerCount) {
+      writeToCell(sheet, 'Customer Count', row, parsedData.customerCount);
+  }
+   if (parsedData.retention) {
+      writeToCell(sheet, 'Retention (Customer or Revenue)', row, parsedData.retention);
+  }
+  
+  if (parsedData.totalCapitalRaised) {
+    writeToCell(sheet, 'Total Capital Raised', row, parsedData.totalCapitalRaised);
+  }
+  if (parsedData.initialInvestment) {
+    writeToCell(sheet, 'Initial Investment', row, parsedData.initialInvestment);
+  }
+
+  //////////////////////////////
+
+  if (parsedData.leadInvestor) {
+    writeToCell(sheet, 'Lead Investor', row, parsedData.leadInvestor);
+  }
+
+  if (parsedData.lastRoundAmount) {
+    writeToCell(sheet, 'Last Round: Amount', row, parsedData.lastRoundAmount);
+  }
+
+  if (parsedData.lastRoundDate) {
+    writeToCell(sheet, 'Last Round: Date', row, parsedData.lastRoundDate);
+  }
+
+  if (parsedData.lastRoundType) {
+    writeToCell(sheet, 'Last Round: Type', row, parsedData.lastRoundType);
+  }
+  
+  if (parsedData.isCurrentlyRaising) {
+    writeToCell(sheet, 'Currently Raising?', row, parsedData.isCurrentlyRaising);
+  }
+  if (parsedData.preMoneyValuation) {
+    writeToCell(sheet, 'Current Raise: Pre Money', row, parsedData.preMoneyValuation);
+  }
+  if (parsedData.postMoneyValuation) {
+    writeToCell(sheet, 'Current Raise: Post Money', row, parsedData.postMoneyValuation);
+  }
+  if (parsedData.targetAmount) {
+    writeToCell(sheet, 'Current Raise: Target', row, parsedData.targetAmount);
+  }
+  if (parsedData.committedAmount) {
+    writeToCell(sheet, 'Current Raise: Committed', row, parsedData.committedAmount);
+  }
+  if (parsedData.committedPercent) {
+    writeToCell(sheet, 'Current Raise: Committed Percent', row, parsedData.committedPercent);
+  }
+  if (parsedData.terms) {
+    writeToCell(sheet, 'Current Raise: Terms', row, parsedData.terms);
+  }
 }
