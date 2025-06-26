@@ -26,6 +26,7 @@ function getGeminiApiKey() {
 
 // --- Sheet Configuration ---
 const MASTER_SHEET = 'Master Sheet'; // Name of the sheet to update/create
+const FINAL_SHEET = 'Final Sheet';
 const ROW = 3; // Starting row for company data
 const COMPANY_UPDATE_ROW = 2;
 const GEMINI_ROW = 4;
@@ -70,7 +71,9 @@ const COLUMN_MAPPINGS = {
     
     'Recent Highlights and News': 'AB', 
     'Strategic Focus': 'AC',
-    'Risks': 'AD'
+    'Risks': 'AD',
+
+    'Report Link': 'AG'
 };
 
 // --- Execution Limits for Gemini Search ---

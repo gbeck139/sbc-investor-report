@@ -5,6 +5,7 @@
 function formatDataForSynthesis(internalRow, hubspotRow, geminiRow) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
+  let sheetFinal = spreadsheet.getSheetByName(FINAL_SHEET);
 
   // Read the data from each of the three source rows using our updated helper function
   const hubspotData = readRowData(sheet, hubspotRow);
