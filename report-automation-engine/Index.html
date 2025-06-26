@@ -85,5 +85,5 @@
 
 <!-- Import the scripting files -->
 <script>
-<?!= include('JavaScript'); ?>  
+  <?!= HtmlService.createTemplateFromFile('JavaScript').evaluate().getContent(); ?>
 </script>

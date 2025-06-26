@@ -12,17 +12,6 @@ function doGet(e) {
 }
 
 /**
- * Includes the content of another HTML file. This is used by the template in Index.html.
- * @param {string} filename The name of the HTML file to include (e.g., 'JavaScript').
- * @returns {string} The content of the file.
- */
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-
-
-/**
  * Gets the list of folder IDs from storage to populate the UI.
  * @returns {string[]} An array of folder IDs.
  */
