@@ -1,60 +1,83 @@
-function getSingleCompany(sheet, targetCompanyName) {
-  // Get all companies using your existing, efficient function
-  const allCompanies = getAllCompanies(sheet); 
-
-  // Normalize the target name for case-insensitive comparison
-  const normalizedTargetName = targetCompanyName.trim().toLowerCase();
-
-  // Loop through the list to find the matching company
-  for (const company of allCompanies) {
-    if (company.name.toLowerCase() === normalizedTargetName) {
-      Logger.log(`Found company "${company.name}" at row ${company.sheetRow}.`);
-      return company; // Return the found company object
-    }
+function getSingleCompany_Refactored(sheet, targetCompanyName) {
+  // --- Step 1: Get the 'Name' column from our single source of truth ---
+  const nameColumnLetter = UNIFIED_MAPPINGS['Name'].column;
+  if (!nameColumnLetter) {
+    Logger.log('Error: "Name" column not defined in UNIFIED_MAPPINGS.');
+    return null;
   }
+  const nameColumnRange = sheet.getRange(`${nameColumnLetter}:${nameColumnLetter}`);
 
-  Logger.log(`Company "${targetCompanyName}" not found in the sheet.`);
-  return null; // Company not found
+  // --- Step 2: Use TextFinder for a highly optimized search ---
+  const textFinder = nameColumnRange.createTextFinder(targetCompanyName);
+  textFinder.matchCase(false); // Make the search case-insensitive
+  textFinder.matchEntireCell(true); // Ensures "Innovate" doesn't match "Innovate Inc."
+  
+  const foundCell = textFinder.findNext();
+
+  // --- Step 3: Process the result ---
+  if (foundCell) {
+    const companyRow = foundCell.getRow();
+    Logger.log(`Found company "${targetCompanyName}" at row ${companyRow}.`);
+    
+    // PERFECT REUSE: Now that we have the row, use our existing helper
+    // to read all the data for that single company.
+    const companyData = readRowData(sheet, companyRow);
+    return companyData; // Returns the full, structured company object
+  } else {
+    Logger.log(`Company "${targetCompanyName}" not found in the sheet.`);
+    return null; // Company not found
+  }
 }
 
 function getAllCompanies(sheet) {
-  Logger.log(`Getting all companies`);
-  const companies = [];
-  const nameColumnLetter = COLUMN_MAPPINGS['Name'];
-  const websiteColumnLetter = COLUMN_MAPPINGS['Website'];
-  const sectorColumnLetter = COLUMN_MAPPINGS['Sector'];
-
-  // Determine the numerical index for the website column within the read range (e.g., D is 3 if A is 0)
-  const websiteColumnIndexInReadRange = websiteColumnLetter.charCodeAt(0) - nameColumnLetter.charCodeAt(0);
-  const sectorColumnIndexInReadRange = sectorColumnLetter.charCodeAt(0) - nameColumnLetter.charCodeAt(0);
-
-  // Determine the last row with content in the name column
-  const lastRow = sheet.getLastRow();
+  Logger.log(`Getting all companies with refactored function.`);
   
-  // Read a range that covers all potential company rows from the name column to the website column
-  const rangeToRead = sheet.getRange(`${nameColumnLetter}${COMPANY_UPDATE_ROW}:${websiteColumnLetter}${lastRow}`);
-  const values = rangeToRead.getValues(); // Get all values in the specified A:D range
+  // --- Step 1: Define required data and get columns from UNIFIED_MAPPINGS ---
+  const requiredFields = {
+    name: UNIFIED_MAPPINGS['Name'].column,         // e.g., 'A'
+    website: UNIFIED_MAPPINGS['Website'].column,   // e.g., 'D'
+    sector: UNIFIED_MAPPINGS['Sector'].column      // e.g., 'C'
+  };
+
+  // --- Step 2: Dynamically determine the full range to read ---
+  // This ensures we read all necessary columns in one go, regardless of their order.
+  const columnChars = Object.values(requiredFields); // ['A', 'D', 'C']
+  const startColChar = String.fromCharCode(Math.min(...columnChars.map(c => c.charCodeAt(0)))); // 'A'
+  const endColChar = String.fromCharCode(Math.max(...columnChars.map(c => c.charCodeAt(0))));   // 'D'
+  
+  const lastRow = sheet.getLastRow();
+  const rangeToRead = sheet.getRange(`${startColChar}${COMPANY_UPDATE_ROW}:${endColChar}${lastRow}`);
+  const values = rangeToRead.getValues();
+  Logger.log(`Dynamically determined range to read: ${startColChar}:${endColChar}`);
+
+  // --- Step 3: Create a map from jsonKey to its index within our read data ---
+  // This replaces the brittle, manual index calculations.
+  const indexMap = {
+    name: requiredFields.name.charCodeAt(0) - startColChar.charCodeAt(0),       // e.g., 'A'-'A' = 0
+    website: requiredFields.website.charCodeAt(0) - startColChar.charCodeAt(0), // e.g., 'D'-'A' = 3
+    sector: requiredFields.sector.charCodeAt(0) - startColChar.charCodeAt(0)   // e.g., 'C'-'A' = 2
+  };
+  
+  const companies = [];
   for (let i = 0; i < values.length; i++) {
-    const currentRowInSheet = i+COMPANY_UPDATE_ROW; // The actual row number in the sheet (e.g., 3, 4, 5, 6...)
-    
-    // Check if it's a "company header row" based on ROW_SPACING
-    // For your setup (ROW=3, ROW_SPACING=3), this is true for rows 3, 6, 9, etc.
+    const currentRowInSheet = i + COMPANY_UPDATE_ROW;
+
+    // --- Step 4: Keep the core business logic, but use the robust indexMap ---
+    // This logic is unchanged because it's correct.
     if (currentRowInSheet % ROW_SPACING === 0) {
-      const name = values[i][0] ? String(values[i][0]).trim() : ''; // Data from the first column in the read range (A)
-      const website = values[i][websiteColumnIndexInReadRange] ? String(values[i][websiteColumnIndexInReadRange]).trim() : ''; // Data from the website column in the read range (D)
-      const sector = values[i][sectorColumnIndexInReadRange] ? String(values[i][sectorColumnIndexInReadRange]).trim() : '';
-      Logger.log(`${values[i]}`);
-      // Only add to list if company name exists
+      const rowData = values[i];
+      
+      // Pull data using our reliable index map. No more hardcoded `[0]`.
+      const name = rowData[indexMap.name] ? String(rowData[indexMap.name]).trim() : '';
+      const website = rowData[indexMap.website] ? String(rowData[indexMap.website]).trim() : '';
+      const sector = rowData[indexMap.sector] ? String(rowData[indexMap.sector]).trim() : '';
+      
       if (name !== '') {
-        companies.push({
-          name: name,
-          website: website,
-          sector: sector,
-          sheetRow: currentRowInSheet
-        });
+        companies.push({ name, website, sector, sheetRow: currentRowInSheet });
       }
     }
   }
+
   Logger.log(`Found ${companies.length} companies to process from the sheet.`);
   return companies;
 }
