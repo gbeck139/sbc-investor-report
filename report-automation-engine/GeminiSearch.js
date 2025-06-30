@@ -144,156 +144,59 @@ function fillCompany(company, sheet) {
   Utilities.sleep(1000); // Be mindful of API rate limits
 }
 
-function parseAndWriteGeminiSearchOutput(sheet, parsedData, row) {
+/**
+ * Formats a value from the parsed data into the final string for a spreadsheet cell.
+ * Handles objects with sources, arrays of objects, and simple values.
+ *
+ * @param {*} value - The value from the parsed JSON data.
+ * @returns {string} The formatted string ready to be written to a cell.
+ */
+function formatCellValue(value) {
+  const NOT_FOUND = "Not found"; // Use a constant for the default value.
 
-  // --- Qualitative Data ---
-  if (parsedData.companySummary) {
-    writeToCell(sheet, 'Company Summary', row, parsedData.companySummary);
-  }
-  if (parsedData.businessModel) {
-    // Assuming businessModel is a simple object like {description: "..."}
-    writeToCell(sheet, 'Business Model', row, parsedData.businessModel);
-  }
-  if (parsedData.keyDifferentiators) {
-    // Pass the entire array of objects directly to writeToCell
-    writeToCell(sheet, 'Key Differentiators', row, parsedData.keyDifferentiators);
-  }
-  if (parsedData.recentHighlightsAndNews) {
-    writeToCell(sheet, 'Recent Highlights and News', row, parsedData.recentHighlightsAndNews);
-  }
-  if (parsedData.strategicFocus) {
-    writeToCell(sheet, 'Strategic Focus', row, parsedData.strategicFocus);
-  }
-  if (parsedData.risks) {
-    writeToCell(sheet, 'Risks', row, parsedData.risks);
-  }
-  if (parsedData.founderCommentary) {
-      writeToCell(sheet, 'Founder Commentary', row, parsedData.founderCommentary);
-  }
-   if (parsedData.fundCommentary) {
-      writeToCell(sheet, 'Fund Commentary', row, parsedData.fundCommentary);
+  // Case 1: The value is null or undefined from the start.
+  if (value === null || value === undefined) {
+    return NOT_FOUND;
   }
 
-  // --- Quantitative Data (Metrics) ---
-   if (parsedData.currentValuation) {
-      writeToCell(sheet, 'Current Valuation', row, parsedData.currentValuation);
-  }
-   if (parsedData.arr) {
-      writeToCell(sheet, 'ARR (Annual Recurring Revenue)', row, parsedData.arr);
-  }
-   if (parsedData.grossProfit) {
-      writeToCell(sheet, 'Gross Profit', row, parsedData.grossProfit);
-  }
-   if (parsedData.cashRunway) {
-      writeToCell(sheet, 'Runway', row, parsedData.cashRunway);
-  }
-   if (parsedData.employeeCount) {
-      writeToCell(sheet, 'Employee Count', row, parsedData.employeeCount);
-  }
-    if (parsedData.customerCount) {
-      writeToCell(sheet, 'Customer Count', row, parsedData.customerCount);
-  }
-   if (parsedData.retention) {
-      writeToCell(sheet, 'Retention (Customer or Revenue)', row, parsedData.retention);
-  }
-  
-  if (parsedData.totalCapitalRaised) {
-    writeToCell(sheet, 'Total Capital Raised', row, parsedData.totalCapitalRaised);
-  }
-  if (parsedData.initialInvestment) {
-    writeToCell(sheet, 'Initial Investment', row, parsedData.initialInvestment);
-  }
-
-  //////////////////////////////
-
-  if (parsedData.leadInvestor) {
-    writeToCell(sheet, 'Lead Investor', row, parsedData.leadInvestor);
-  }
-
-  if (parsedData.lastRoundAmount) {
-    writeToCell(sheet, 'Last Round: Amount', row, parsedData.lastRoundAmount);
-  }
-
-  if (parsedData.lastRoundDate) {
-    writeToCell(sheet, 'Last Round: Date', row, parsedData.lastRoundDate);
-  }
-
-  if (parsedData.lastRoundType) {
-    writeToCell(sheet, 'Last Round: Type', row, parsedData.lastRoundType);
-  }
-  
-  if (parsedData.isCurrentlyRaising) {
-    writeToCell(sheet, 'Currently Raising?', row, parsedData.isCurrentlyRaising);
-  }
-  if (parsedData.preMoneyValuation) {
-    writeToCell(sheet, 'Current Raise: Pre Money', row, parsedData.preMoneyValuation);
-  }
-  if (parsedData.postMoneyValuation) {
-    writeToCell(sheet, 'Current Raise: Post Money', row, parsedData.postMoneyValuation);
-  }
-  if (parsedData.targetAmount) {
-    writeToCell(sheet, 'Current Raise: Target', row, parsedData.targetAmount);
-  }
-  if (parsedData.committedAmount) {
-    writeToCell(sheet, 'Current Raise: Committed', row, parsedData.committedAmount);
-  }
-  if (parsedData.committedPercent) {
-    writeToCell(sheet, 'Current Raise: Committed Percent', row, parsedData.committedPercent);
-  }
-  if (parsedData.terms) {
-    writeToCell(sheet, 'Current Raise: Terms', row, parsedData.terms);
-  }
-}
-
-function writeToCell(sheet, columnName, row, value) {
-  const columnLetter = COLUMN_MAPPINGS[columnName];
-  if (!columnLetter) {
-    Logger.log(`WARNING: Column mapping not found for "${columnName}"`);
-    return;
-  }
-
-  let finalCellContent = "Not found"; // Default value
-  
-  if (typeof value === 'object' && value !== null && !Array.isArray(value) && value.hasOwnProperty('description')) {
-    let description = value.description || "Not found";
+  // Case 2: The value is a single object with 'description' and optional 'sources'.
+  if (typeof value === 'object' && !Array.isArray(value) && value.hasOwnProperty('description')) {
+    let description = value.description || NOT_FOUND;
     let sources = value.sources;
     
-    finalCellContent = description;
+    let finalCellContent = description;
 
     if (Array.isArray(sources) && sources.length > 0) {
       finalCellContent += `\n\nSources:\n${sources.join("\n")}`;
     }
+    return finalCellContent;
   }
-  // Case 2: The value is an ARRAY of objects, like keyDifferentiators or risks
-  else if (Array.isArray(value)) {
-    if (value.length > 0) {
-      // Use .map() to format each object in the array into its own string block
-      const itemStrings = value.map(item => {
-        // Check if the item in the array is a valid object with a description
-        if (typeof item === 'object' && item !== null && item.description) {          
-          let text = item.description;
-
-          if (item.sources && Array.isArray(item.sources) && item.sources.length > 0) {
-            text += `\nSources:\n${item.sources.join("\n")}`;
-          }
-          return text;
-        }
-        return item.toString(); // Fallback for simple arrays, though not expected with this schema
-      });
-      // Join each formatted block with a double newline for readability
-      finalCellContent = itemStrings.join('\n\n'); 
-    }
-  } else {
-    // If it's not our special object, just use the value as is.
-    // If the value is null or undefined, set it to "Not found".
-    finalCellContent = value !== null && value !== undefined ? value : "Not found";
-  }
-
-  const cell = sheet.getRange(columnLetter + row);
-  cell.setValue(finalCellContent);
   
-  // // Automatically set the cell to wrap text, which is great for multi-line content.
-  // cell.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+  // Case 3: The value is an ARRAY of objects (like for 'Key Differentiators' or 'Risks').
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return NOT_FOUND; // Return "Not found" for empty arrays.
+    }
+    // Use .map() to format each object in the array into its own string block.
+    const itemStrings = value.map(item => {
+      // Recursively call this same function to format each item in the array.
+      // This elegantly handles arrays of objects, or even simple arrays of strings.
+      return formatCellValue(item); 
+    });
+    // Join each formatted block with a double newline for readability.
+    return itemStrings.join('\n\n');
+  } 
+  
+  // Case 4: It's a simple value (string, number, boolean).
+  return value;
+}
+
+function writeToCell(sheet, column, row, value) {
+  // Basic handling for array/object data - convert to a readable string
+  if (typeof value === 'object' && value !== null) {
+    value = JSON.stringify(value, null, 2);
+  }
+  sheet.getRange(column + row).setValue(value);
 }
 
 

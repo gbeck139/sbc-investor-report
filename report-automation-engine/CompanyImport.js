@@ -198,15 +198,16 @@ function generateGeminiPayload(pdfFile) {
 
     // Set the proper formatting from COLUMN_MAPPINGS keys
     const formatConfig = {};
-    for (const fieldName of Object.keys(COLUMN_MAPPINGS)) {
+    for (const fieldName of Object.keys(UNIFIED_MAPPINGS)) {
         formatConfig[fieldName] = { "type": "string" };
     }
 
     // Remove fields hubspot already provided.
-    delete COLUMN_MAPPINGS.Name;
-    delete COLUMN_MAPPINGS.Source;
-    delete COLUMN_MAPPINGS.Sector;
-    delete COLUMN_MAPPINGS.Website;
+    delete UNIFIED_MAPPINGS.Name;
+    delete UNIFIED_MAPPINGS.Source;
+    delete UNIFIED_MAPPINGS.Sector;
+    delete UNIFIED_MAPPINGS.Website;
+    
     
     // Define the generation configuration for Gemini
     const generationConfig = {
@@ -301,7 +302,7 @@ function writeGeminiDataToSheet(company, geminiData, sheet) {
     Logger.log(`Writing data for ${company} to row ${row} in the sheet.`);
 
     for (const [field, value] of Object.entries(geminiData)) {
-        const column = COLUMN_MAPPINGS[field];
+        const column = UNIFIED_MAPPINGS[field].column;
         if (column && value != `null`) {
             try {
                 // Get the cell indexing from column and row

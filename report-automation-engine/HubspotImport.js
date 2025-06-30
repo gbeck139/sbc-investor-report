@@ -25,7 +25,8 @@ const HUBSPOT_COLUMN_MAPPINGS = {
   'n5_03_00__company_valuation': 'V',
   'n5_3_12__what_is_your_current_annual_recurring_revenue__arr_': 'W',
   'n5_3_11__what_is_your_current_company_runway': 'X',
-  'n5_3_10__last_6_month_highlights': 'AB'
+  'n5_3_10__last_6_month_highlights': 'AB',
+  // 'country__2' : ''
 
 };
 

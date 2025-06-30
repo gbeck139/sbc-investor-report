@@ -65,7 +65,7 @@ function getSearchCompanyFundingPrompt(companyName, companyWebsite){
 
     **Part 1: Historical Fundraising**
     [TOTAL_CAPITAL_RAISED]
-    [INITIAL_INVESTMENT_AMOUNT_AND_TYPE]
+    [INITIAL_INVESTMENT_AMOUNT]
     [LAST_ROUND_DATE]
     [LAST_ROUND_TYPE]
     [LAST_ROUND_AMOUNT]
@@ -196,33 +196,33 @@ function getSynthesizeFinalCompanyPrompt(companyName, companyWebsite, internalRo
     ---
     **Part 3: Output Instructions**
 
-    You must generate your entire response as a single block of structured text. Use the following \`[BRACKET_TAGS]\` for every piece of information. Do not add any other commentary.
+    You must generate your entire response as a single block of structured text. Use the following \`[BRACKET_TAGS]\` for every piece of information. Do not add any other commentary or a period at the end, unless a full sentence. If information cannot be determined, state "Undisclosed"
 
     **You must include information for each of the following tags, do not add other tags.**
 
-    [COMPANY_SUMMARY] A 2-3 sentence overview of the company's mission and core product.
+    [COMPANY_SUMMARY] A 2 sentence overview of the company's mission and core product.
     [BUSINESS_MODEL] The company's primary business model (e.g., B2B SaaS, Marketplace).
-    [KEY_DIFFERENTIATORS] A unique aspect of their technology, partnerships, or market strategy.
-    [RECENT_HIGHLIGHT_AND_NEWS] A significant recent milestone, product update, or partnership. (Include the date if available).
+    [KEY_DIFFERENTIATORS] Unique aspects of their technology, partnerships, or market strategy.
+    [RECENT_HIGHLIGHT_AND_NEWS] Significant recent milestones, product updates, or partnerships. (Include the date if available).
     [STRATEGIC_FOCUS] A current strategic priority, such as a fundraising goal or product launch.
     [RISK] A potential risk or challenge facing the company.
     [FOUNDER_COMMENTARY] A direct quote or paraphrased statement from a founder.
     [FUND_COMMENTARY] A direct quote or paraphrased statement from an investment fund about the company.
     [CURRENT_VALUATION]
-    [ANNUAL_RECURRING_REVENUE]
+    [ANNUAL_RECURRING_REVENUE] One total ARR value
     [GROSS_PROFIT]
     [RUNWAY]
-    [EMPLOYEE_COUNT] (Specify if the number is approximate, e.g., from LinkedIn).
-    [CUSTOMER_COUNT] (Specify if the number is a minimum, e.g., "over 1,000").
-    [RETENTION_RATE] (Specify the type, e.g., "Net Revenue Retention")."
-    [TOTAL_CAPITAL_RAISED]
+    [EMPLOYEE_COUNT]
+    [CUSTOMER_COUNT] (Specify if the number is a minimum, e.g., "over 1,000")
+    [RETENTION_RATE] (Specify the type, e.g., "Net Revenue Retention")
+    [TOTAL_CAPITAL_RAISED] Only include the grand total
     [INITIAL_INVESTMENT_AMOUNT]
     [LEAD_INVESTOR]
     [LAST_ROUND_DATE]
     [LAST_ROUND_TYPE]
     [LAST_ROUND_AMOUNT]
     [LAST_ROUND_LEAD_INVESTOR]
-    [IS_CURRENTLY_RAISING] (State "Yes" or "No" based on available information).
+    [IS_CURRENTLY_RAISING] (State "Yes" or "No" or "Undisclosed" based on available information)
     [CURRENT_RAISE_TARGET]
     [CURRENT_RAISE_COMMITTED]
     [CURRENT_RAISE_COMMITTED_PERCENT]

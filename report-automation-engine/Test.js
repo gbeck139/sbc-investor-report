@@ -21,5 +21,5 @@ function test(){
 }
 
 function testSynth(){
-  Logger.log(formatDataForSynthesis(72, 71, 73));
+  Logger.log(formatDataForSynthesis(71, 72, 73));
 }
