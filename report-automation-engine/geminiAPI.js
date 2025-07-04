@@ -1,16 +1,14 @@
 function callGeminiAPI(model, prompt, grounding) {
-  let tools = []
-  if (grounding){
-    tools = [
-      {
-      googleSearch: {} // Enables Google Search grounding
-      },
-    // {
-    //   urlContext: {}   // Enables URL context reading
-    // }
-    ];
+  const maxRetries = 3;
+  let lastError = null;
+
+  let tools = [];
+  if (grounding) {
+    tools = [{
+      googleSearch: {}
+    }];
   }
-  
+
   const generationConfig = {
     topP: 0.95,
     topK: 64,
@@ -21,14 +19,12 @@ function callGeminiAPI(model, prompt, grounding) {
 
   const payload = {
     generationConfig,
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { text: prompt },
-        ],
-      },
-    ],
+    contents: [{
+      role: 'user',
+      parts: [{
+        text: prompt
+      }],
+    }, ],
     tools: tools
   };
 
@@ -36,43 +32,64 @@ function callGeminiAPI(model, prompt, grounding) {
   const options = {
     method: 'POST',
     contentType: 'application/json',
-    payload: JSON.stringify(payload)
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
   };
 
-  let generatedText = '';
-
+  for (let i = 0; i < maxRetries; i++) {
     try {
-        const apiResponse = UrlFetchApp.fetch(url, options);
-        const responseCode = apiResponse.getResponseCode();
-        const responseBody = apiResponse.getContentText();
-        if (responseCode === 200) {
-          Logger.log("got response 200");
-            const parsedResponse = JSON.parse(responseBody);
+      const apiResponse = UrlFetchApp.fetch(url, options);
+      const responseCode = apiResponse.getResponseCode();
+      const responseBody = apiResponse.getContentText();
 
-            if (parsedResponse.candidates && parsedResponse.candidates[0]) {
-                const candidate = parsedResponse.candidates[0]; // Get the first candidate object
-                 Logger.log(`WARNING: Candidate found but it has no text parts. Finish Reason: ${candidate.finishReason}`);
-                generatedText = candidate.content.parts[0].text
-                // Log the metadata from the candidate object
-                if (grounding && candidate.groundingMetadata) {
-                    Logger.log("Supports:\n" + JSON.stringify(candidate.groundingMetadata.groundingSupports, null, 2));
-                    Logger.log("Chunks:\n" + JSON.stringify(candidate.groundingMetadata.groundingChunks, null, 2));
-                    generatedText = addCitations(candidate); 
-                } else {
-                    Logger.log("Grounding Metadata was not present in this response.");
-                }
-                generatedText = cleanJsonString(generatedText)
-                Logger.log("Final Text (with citations if grounded)" + generatedText);
-            } else {
-                Logger.log("WARNING: Gemini response structure is not as expected, 'candidates' field not found.");
-            }
+      if (responseCode === 200) {
+        Logger.log("Got response 200");
+        const parsedResponse = JSON.parse(responseBody);
+
+        if (
+          parsedResponse.candidates &&
+          parsedResponse.candidates[0] &&
+          parsedResponse.candidates[0].content &&
+          parsedResponse.candidates[0].content.parts &&
+          parsedResponse.candidates[0].content.parts[0] &&
+          parsedResponse.candidates[0].content.parts[0].text
+        ) {
+          const candidate = parsedResponse.candidates[0];
+          let generatedText = candidate.content.parts[0].text;
+
+          if (grounding && candidate.groundingMetadata) {
+            Logger.log("Supports:\n" + JSON.stringify(candidate.groundingMetadata.groundingSupports, null, 2));
+            Logger.log("Chunks:\n" + JSON.stringify(candidate.groundingMetadata.groundingChunks, null, 2));
+            generatedText = addCitations(candidate);
+          } else {
+            Logger.log("Grounding Metadata was not present in this response.");
+          }
+          generatedText = cleanJsonString(generatedText);
+          Logger.log("Final Text (with citations if grounded)" + generatedText);
+          return generatedText;
         } else {
-            Logger.log(`Error: Received response code ${responseCode}`);
+          const finishReason = parsedResponse.candidates && parsedResponse.candidates[0] ? parsedResponse.candidates[0].finishReason : 'unknown';
+          lastError = new Error(`Invalid Gemini API response format. Finish Reason: ${finishReason}`);
+          Logger.log(`WARNING: Candidate found but it has no text parts. Finish Reason: ${finishReason}. Attempt ${i + 1}/${maxRetries}`);
+          Logger.log("Problematic JSON response:", JSON.stringify(parsedResponse, null, 2));
         }
+      } else {
+        lastError = new Error(`API call failed with response code ${responseCode}: ${responseBody}`);
+        Logger.log(`Error: Received response code ${responseCode} on attempt ${i + 1}/${maxRetries}. Body: ${responseBody}`);
+      }
     } catch (e) {
-        Logger.log(`Exception during API call or parsing: ${e.message}`);
+      lastError = e;
+      Logger.log(`Exception during API call or parsing on attempt ${i + 1}/${maxRetries}: ${e.message}`);
     }
-    return generatedText;
+
+    if (i < maxRetries - 1) {
+      Logger.log("Retrying in 5 seconds...");
+      Utilities.sleep(5000);
+    }
+  }
+
+  Logger.log(`All API call attempts failed. Last error: ${lastError.message}`);
+  throw new Error(`API call failed after ${maxRetries} attempts. Last error: ${lastError.message}`);
 }
 
 function addCitations(candidate) { 
