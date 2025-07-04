@@ -1,89 +1,207 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <base target="_top">
-    <style>
-      body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
-      .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-      h1, h2 { color: #333; }
-      .section { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
-      label { font-weight: bold; margin-bottom: 8px; color: #555; }
-      button { background-color: #4285F4; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
-      button:hover { background-color: #357ae8; }
-      button:disabled { background-color: #ccc; cursor: not-allowed; }
-      .button-link { background: none; border: none; color: #4285F4; cursor: pointer; padding: 0; font-size: 14px; margin: 0 10px 0 0; }
-      
-      /* Step 1: Cohort Selection */
-      .scrollable-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-top: 5px; }
-      .checkbox-item { display: block; margin-bottom: 8px; }
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
 
-      /* Step 2: Company Selection */
-      #company-search { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-      #selected-companies-list { margin-top: 10px; padding: 10px; border: 1px solid #eee; border-radius: 4px; min-height: 40px; }
-      .company-pill { display: inline-flex; align-items: center; background-color: #e0e0e0; border-radius: 16px; padding: 5px 12px; margin: 4px; font-size: 14px; }
-      .remove-pill { margin-left: 8px; cursor: pointer; font-weight: bold; color: #666; }
-      .remove-pill:hover { color: #000; }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
 
-      /* Step 4: Status Log */
-      #status-log { background-color: #222; color: #0f0; font-family: 'Courier New', Courier, monospace; padding: 15px; border-radius: 4px; height: 200px; overflow-y: auto; white-space: pre-wrap; margin-top: 10px; }
-    </style>
+    h1,
+    h2 {
+      color: #333;
+    }
+
+    .section {
+      margin-bottom: 25px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 20px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #555;
+    }
+
+    button {
+      background-color: #4285F4;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #357ae8;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .button-link {
+      background: none;
+      border: none;
+      color: #4285F4;
+      cursor: pointer;
+      padding: 0;
+      font-size: 14px;
+      margin: 0 10px 0 0;
+    }
+
+    /* Step 1: Cohort Selection */
+    .scrollable-list {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 5px;
+    }
+
+    .checkbox-item {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    /* Step 2: Company Selection */
+    #company-search {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    #selected-companies-list {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      min-height: 40px;
+    }
+
+    .company-pill {
+      display: inline-flex;
+      align-items: center;
+      background-color: #e0e0e0;
+      border-radius: 16px;
+      padding: 5px 12px;
+      margin: 4px;
+      font-size: 14px;
+    }
+
+    .remove-pill {
+      margin-left: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #666;
+    }
+
+    .remove-pill:hover {
+      color: #000;
+    }
+
+    /* Step 4: Status Log */
+    #status-log {
+      background-color: #222;
+      color: #0f0;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 15px;
+      border-radius: 4px;
+      height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-top: 10px;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>SBC Update Processor</h1>
+  <div class="container">
+    <h1>SBC Update Processor</h1>
 
-        <!-- Step 1: Cohort Selection -->
-        <div class="section">
-            <h2>1. Select Cohorts</h2>
-            <div>
-              <button class="button-link" onclick="selectAllCohorts(true)">Select All</button>
-              <button class="button-link" onclick="selectAllCohorts(false)">Deselect All</button>
-            </div>
-            <div id="cohort-list" class="scrollable-list">
-              <p>Loading cohorts...</p>
-            </div>
-        </div>
-
-        <!-- Step 2: Company Selection -->
-        <div class="section">
-            <h2>2. Select Companies</h2>
-            <label for="company-search">Search for a company to add:</label>
-            <input type="text" id="company-search" placeholder="Type to search..." list="company-suggestions" onchange="handleCompanySelection(this)">
-            <datalist id="company-suggestions"></datalist>
-
-            <p style="margin-top: 15px;">Selected Companies:</p>
-            <div id="selected-companies-list">
-              <!-- Selected company pills will appear here -->
-            </div>
-        </div>
-
-        <!-- Step 3: Run Scripts -->
-        <div class="section">
-            <h2>3. Run Process</h2>
-            <p>Select the scripts to run on the selected companies.</p>
-            <div class="checkbox-item">
-              <input type="checkbox" id="run-hubspot-script">
-              <label for="run-hubspot-script">Run HubSpot Import (creates/updates company list)</label>
-            </div>
-            <div class="checkbox-item">
-              <input type="checkbox" id="run-pdf-script" checked>
-              <label for="run-pdf-script">Run Main PDF Extraction</label>
-            </div>
-            <br>
-            <button id="run-btn" onclick="startProcess()">Run Selected Process</button>
-        </div>
-
-        <!-- Step 4: Status Log -->
-        <div class="section">
-            <h2>Status Log</h2>
-            <div id="status-log">Welcome! Configure your settings and click "Run".</div>
-        </div>
+    <!-- Step 1: Cohort Selection -->
+    <div class="section">
+      <h2>1. Select Cohorts</h2>
+      <div>
+        <button class="button-link" onclick="selectAllCohorts(true)">Select All</button>
+        <button class="button-link" onclick="selectAllCohorts(false)">Deselect All</button>
+      </div>
+      <div id="cohort-list" class="scrollable-list">
+        <p>Loading cohorts...</p>
+      </div>
     </div>
 
+    <!-- Step 2: Company Selection -->
+    <div class="section">
+      <h2>2. Select Companies</h2>
+      <label for="company-search">Search for a company to add:</label>
+      <input type="text" id="company-search" placeholder="Type to search..." list="company-suggestions"
+        onchange="handleCompanySelection(this)">
+      <datalist id="company-suggestions"></datalist>
+
+      <div>
+        <button class='button-link' onclick="selectAllCompanies(true)">Select All</button>
+        <button class='button-link' onclick="selectAllCompanies(false)">Deselect All</button>
+      </div>
+      <p style="margin-top: 15px;">Selected Companies:</p>
+      <div id="selected-companies-list">
+        <!-- Selected company pills will appear here -->
+      </div>
+    </div>
+
+    <!-- Step 3: Run Scripts -->
+    <div class="section">
+      <h2>3. Run Process</h2>
+      <p>Select the scripts to run on the selected companies.</p>
+      <div class="checkbox-item">
+        <input type="checkbox" id="run-hubspot-script">
+        <label for="run-hubspot-script">Import From Hubspot</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="run-pdf-script" checked>
+        <label for="run-pdf-script"> Extract Company Updates</label>
+      </div>
+       <div class="checkbox-item">
+        <input type="checkbox" id="run-gemini-script" checked>
+        <label for="run-gemini-script"> Perform External Search</label>
+      </div>
+       <div class="checkbox-item">
+        <input type="checkbox" id="run-onepager-script" checked>
+        <label for="run-onepager-script"> Generate Company One-Pager(s) </label>
+      </div>
+      <br>
+      <button id="run-btn" onclick="startProcess()">Run Selected Processes</button>
+    </div>
+
+    <!-- Step 4: Status Log -->
+    <div class="section">
+      <h2>Status Log</h2>
+      <div id="status-log">Welcome! Configure your settings and click "Run".</div>
+    </div>
+  </div>
+
 </body>
+
 </html>
 
 <!-- Import the scripting files -->
-<script>
-  <?!= HtmlService.createTemplateFromFile('JavaScript').evaluate().getContent(); ?>
-</script>
+<?!= HtmlService.createTemplateFromFile('JavaScript').evaluate().getContent(); ?>

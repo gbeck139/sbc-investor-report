@@ -1,8 +1,8 @@
-// File: Code.gs
-
-const SCRIPT_PROPS = PropertiesService.getScriptProperties();
 
 // --- WEB APP FUNCTIONS ---
+
+const COHORT_LIST = {};
+
 
 function doGet(e) {
   return HtmlService.createTemplateFromFile('Index')
@@ -12,117 +12,149 @@ function doGet(e) {
 }
 
 /**
- * Gets the list of folder IDs from storage to populate the UI.
- * @returns {string[]} An array of folder IDs.
+ *  Function to get the information from hubspot and create a cohort mapping list
  */
-function getFolderData() {
-  const folderData = SCRIPT_PROPS.getProperty('SBC_UPDATE_FOLDERS');
-  // Provide a default empty array if nothing is stored
-  return folderData ? JSON.parse(folderData) : [];
-}
+function mapCompanies() {
+  const rowMaps = {}
+  getCompaniesFromHs().forEach((company, i) => {
+    const cohort = company.properties.program_name;
+    const name = company.properties.name;
+    
+    rowMaps[name.toLowerCase()] = ROW + (ROW_SPACING * i);
 
-/**
- * Saves the list of folder IDs to storage.
- * @param {string[]} folders An array of folder IDs to save.
- * @returns {string} A success message.
- */
-function saveFolderData(folders) {
-  if (!Array.isArray(folders)) {
-    return 'Invalid data format. Expected an array of folder IDs.';
+    if (cohort in COHORT_LIST)
+      COHORT_LIST[cohort].push(name);
+    else
+      COHORT_LIST[cohort] = [name];
+  });
+
+  // Save the properties for use later in the script.
+  const props = {
+    'ROW_MAPPINGS': JSON.stringify(rowMaps),
+    'COHORTS': JSON.stringify(COHORT_LIST)
   }
-  SCRIPT_PROPS.setProperty('SBC_UPDATE_FOLDERS', JSON.stringify(folders));
-  return 'Folder list saved successfully!';
+  SCRIPT_PROPS.setProperties(props);
 }
 
 /**
- * Accesses the existing companies based upon the last hubspot import.
- * @returns {string[]} A sorted, unique list of company names.
- */
-function getCompanyList() {
-  const mappingsString = SCRIPT_PROPS.getProperty('ROW_MAPPINGS');
-  if (!mappingsString) return []; // Return empty if no mappings exist
-  
-  const mappings = JSON.parse(mappingsString);
-  return Object.keys(mappings).sort();
-}
-
-/**
- * Returns the cohorts and tehir companies
+ * Performs any startup commands and return information required for builiding webpage
  */
 function getInitialData() {
-  try {
-    const cohortsJSON = SCRIPT_PROPS.getProperty('COHORTS');
-    Logger.log(JSON.parse(cohortsJSON));
-    return JSON.parse(cohortsJSON);
-  } catch (e) {
-    return { error: e.message };
+  updateFolders(DRIVE_IDS);
+  mapCompanies();
+  return COHORT_LIST;
+}
+
+/**
+ * Function to access the list of folder IDs from the specified (shared) Google Drive.
+ * Returns just the top level as that is where a cohorts would be found
+ * 
+ * @param {List{String}} sharedDriveIds - A list of IDs to search within.
+ */
+function updateFolders(sharedDriveIds = ['0ANlAdFJelSKxUk9PVA']) {
+  var pageToken = null;
+  const folders = [];
+  for (const sharedDriveId of sharedDriveIds) {
+    do {
+      var response = Drive.Files.list({
+        q: "mimeType='application/vnd.google-apps.folder' and trashed=false and '" + sharedDriveId + "' in parents",
+        driveId: sharedDriveId,
+        corpora: 'drive',
+        includeItemsFromAllDrives: true,
+        supportsAllDrives: true,
+        pageToken: pageToken
+      });
+
+      // If we get a response, iterate through it
+      if (response.files && response.files.length > 0)
+        for (const folderObj of response.files) {
+          try {
+            const parentFolder = DriveApp.getFolderById(folderObj.id);
+
+            // Check that the parent folder is valid and is a Cohort Year (numbers in name)
+            if (!parentFolder || parentFolder.getName().replace(/\D/g, '') === '')
+              continue;
+
+            folders.push(parentFolder.getId());
+
+          } catch (e) {
+            Logger.log(`Error processing folder ${folderObj.name}: ${e.message}`);
+            continue;
+          }
+        }
+
+      // Continue grabbing the next page till finished
+      pageToken = response.nextPageToken;
+    }
+    while (pageToken);
   }
+
+  SCRIPT_PROPS.setProperty(`COHORT_FOLDERS`, JSON.stringify(folders));
+}
+
+/**
+ * Checks if a cohort name (e.g., "FT21") belongs within a folder name's range (e.g., "FT19-21").
+ * @param {string} folderName The name of the Google Drive folder.
+ * @param {string} cohortName The name of the cohort from the UI.
+ * @return {boolean} True if the cohort is contained within the folder's range.
+ */
+function containsCohort(folderName, cohortName) {
+  // Regex to extract the cohort prefix 
+  const prefixRegex = /^[A-Z]+/;
+
+  // Check the prefix fulfills the regex
+  const cohortPrefix = cohortName.match(/^[A-Z]+/);
+  if (!cohortPrefix)
+    return false;
+
+  // Return whether the prefixes match
+  return folderName.startsWith(cohortMatch[0]);
 }
 
 /**
  * The MAIN function called by the UI to start all processes.
  * It takes an options object from the frontend.
- * @param {object} options { companies: string[], runHubspot: boolean, runPdf: boolean }
+ * @param {object} options {companies: string[], cohorts: string[] runHubspot: boolean, runPdf: boolean }
  */
 function runProcesses(options) {
   const logOutput = [];
   try {
     logOutput.push("Process started on the server...");
-    
+
     // --- Run HubSpot Import if selected ---
     if (options.runHubspot) {
       logOutput.push("\n--- Running HubSpot Import ---");
-      try {
-        // We'll "borrow" the UI from createSheets to give feedback
-        const ui = SpreadsheetApp.getUi();
-        const companies = getCompaniesFromHs();
-        logOutput.push(`Fetched ${companies.length} companies from HubSpot.`);
-        
-        const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-        let workingSheet = spreadsheet.getSheetByName(MASTER_SHEET);
 
-        if(!workingSheet) {
-          logOutput.push(`Sheet '${MASTER_SHEET}' not found. Creating it...`);
-          workingSheet = spreadsheet.insertSheet(MASTER_SHEET);
-        }
-
-        let rowMappings = {};
-        let cohortMappings = {};
-        companies.forEach((company,index) => { 
-            const currentRow = STARTING_ROW + (index * ROW_SPACING);
-            writeToRow(workingSheet, company.properties, currentRow);
-            
-            let name = company.properties.name;
-            rowMappings[name.toLowerCase()] = currentRow;
-
-            let cohort = company.properties.program_name; 
-            if (cohort in cohortMappings) {
-              cohortMappings[cohort].push(name);
-            } else { 
-              cohortMappings[cohort] = [name];
-            }
-        });
-        
-        SCRIPT_PROPS.setProperty('ROW_MAPPINGS', JSON.stringify(rowMappings));
-        SCRIPT_PROPS.setProperty('COHORTS', JSON.stringify(cohortMappings));
-        logOutput.push("✅ Successfully updated Row and Cohort mappings.");
-
-      } catch (e) {
-        logOutput.push(`--> ERROR during HubSpot import: ${e.message}`);
-      }
+      createSheets(options.companies);
     }
 
     // --- Run PDF Extraction if selected ---
     if (options.runPdf) {
       logOutput.push("\n--- Running PDF Extraction ---");
-      // Use the default folder info for now, as UI doesn't select folders anymore
-      const folderIds = Object.values(DEFAULT_FOLDER_INFO);
-      processCompanyPdfs(folderIds, options.companies, logOutput);
+
+      analyzePDFs(options.companies, options.cohorts);
     }
-    
+
+    if (options.runGemini) {
+      logOutput.push("\n--- Running External Search ---");
+
+      Logger.log("You totally ran gemini")
+
+      geminiSearch(options.companies);
+
+    }
+    if (options.runOnePager) {
+      logOutput.push("\n--- Running OnePager Creation ---");
+
+      Logger.log("Grant got cream cheese on the motherboard sorry!!")
+
+      // Replace with method call  -- createOnePager(options.companies);
+
+    }
+
     return logOutput.join('\n');
-    
-  } catch(e) {
+
+  } catch (e) {
     return `\n!!! A CRITICAL ERROR OCCURRED: ${e.message} !!!`;
   }
 }

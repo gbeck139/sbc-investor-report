@@ -1,3 +1,4 @@
+<script>
 
 // --- GLOBAL STATE ---
 let allCohortsData = {}; // Stores the full { cohort: [companies] } map
@@ -11,10 +12,8 @@ window.addEventListener('load', function() {
 });
 
 // --- UI POPULATION & INITIALIZATION ---
-// THIS IS THE CORRECTED FUNCTION
 function populateInitialUI(data) {
-    // Check if the data received is an object and has keys.
-    // The 'error' property is a special case from our backend.
+    // Check if the data received is an object and has keys, error being a custom backend property
     if (!data || typeof data !== 'object' || data.error || Object.keys(data).length === 0) {
         const errorMessage = data.error ? data.error : "Failed to load cohort data from the server or the COHORTS property is empty.";
         showError({ message: errorMessage });
@@ -22,6 +21,7 @@ function populateInitialUI(data) {
         return;
     }
 
+    // Save for future reference
     allCohortsData = data;
 
     populateCohorts(Object.keys(allCohortsData));
@@ -73,6 +73,21 @@ function handleCohortChange() {
         }
     });
 
+    const selectedCompanyPills = Array.from(document.querySelectorAll('.company-pill'));
+    if (checkedCohorts.length === 0) {
+        // If no cohorts are selected, clear all pills
+        document.getElementById('selected-companies-list').innerHTML = '';
+        logMessage('All cohorts deselected, clearing all company pills.');
+    } else {
+        // If some cohorts are selected, remove pills for companies that are no longer available
+        selectedCompanyPills.forEach(pill => {
+            if (!availableCompanies.has(pill.dataset.company)) {
+                pill.remove();
+                logMessage(`Removed company pill for "${pill.dataset.company}" as it is no longer available in selected cohorts.`);
+            }
+        });
+    }
+
     updateCompanySuggestions();
     logMessage(`Updated company list: ${availableCompanies.size} companies available for selection.`);
 }
@@ -93,6 +108,22 @@ function handleCompanySelection(inputElement) {
     if (companyName && availableCompanies.has(companyName)) {
         addCompanyPill(companyName);
         inputElement.value = ''; // Clear the input for the next search
+    }
+}
+
+function selectAllCompanies(shouldSelect) {
+    const pillList = document.getElementById('selected-companies-list');
+    pillList.innerHTML = ''; // Clear existing pills
+
+    if (shouldSelect) {
+        // Add a pill for every available company
+        Array.from(availableCompanies).sort().forEach(companyName => {
+            addCompanyPill(companyName);
+        });
+        logMessage('All companies selected.');
+    } else {
+        // Deselect all
+        logMessage('All companies deselected.');
     }
 }
 
@@ -124,24 +155,33 @@ function startProcess() {
     const runBtn = document.getElementById('run-btn');
     const runHubspotCheckbox = document.getElementById('run-hubspot-script');
     const runPdfCheckbox = document.getElementById('run-pdf-script');
+    const runGeminiCheckBox = document.getElementById('run-gemini-script');
+    const runOnePagerCheckBox = document.getElementById('run-onepager-script');
 
-    if (!runHubspotCheckbox.checked && !runPdfCheckbox.checked) {
+    if (!runHubspotCheckbox.checked && !runPdfCheckbox.checked && 
+        !runGeminiCheckBox.checked && !runOnePagerCheckBox.checked) {
         alert('Please select at least one process to run.');
         return;
     }
 
     // Get selected companies from the pills
     const selectedCompanies = Array.from(document.querySelectorAll('.company-pill')).map(pill => pill.dataset.company);
+    const selectedCohorts = Array.from(document.querySelectorAll('#cohort-list input:checked')).map(cb => cb.value);
+
+
     
-    if (runPdfCheckbox.checked && selectedCompanies.length === 0) {
-        alert('Please select at least one company to process for the PDF extraction.');
+    if (selectedCompanies.length === 0) {
+        alert('Please select at least one company to process');
         return;
     }
 
     const processOptions = {
         companies: selectedCompanies,
+        cohorts: selectedCohorts,
         runHubspot: runHubspotCheckbox.checked,
-        runPdf: runPdfCheckbox.checked
+        runPdf: runPdfCheckbox.checked,
+        runGemini: runGeminiCheckBox.checked,
+        runOnePager: runOnePagerCheckBox.checked
     };
 
     runBtn.disabled = true;
@@ -175,3 +215,4 @@ function showError(error) {
     log.innerHTML += `\n<span style="color: #f00;">[${timestamp}] ERROR: ${error.message}</span>\n`;
     log.scrollTop = log.scrollHeight;
 }
+</script>

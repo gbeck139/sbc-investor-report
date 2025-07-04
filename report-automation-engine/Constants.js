@@ -3,7 +3,7 @@
  * All constants defined here are accessible across all .gs files in this Apps Script project.
  */
 
-SCRIPT_PROPS = PropertiesService.getScriptProperties();
+const SCRIPT_PROPS = PropertiesService.getScriptProperties();
 
 // --- API Key Accessor Functions ---
 // These functions provide a global way to access API keys from script properties.
@@ -23,16 +23,19 @@ function getGeminiApiKey() {
   return apiKey;
 }
 
+// --- Drive Config ---
+const DRIVE_IDS = ['0ANlAdFJelSKxUk9PVA'];
+
 
 // --- Sheet Configuration ---
 const MASTER_SHEET = 'Master Sheet'; // Name of the sheet to update/create
 const FINAL_SHEET = 'Final Sheet';
-const ROW = 3; // Starting row for company data
+const ROW = 2; // Starting row for company data
 const COMPANY_UPDATE_ROW = 2;
+const HUBSPOT_ROW = 3;
 const GEMINI_ROW = 4;
 const ROW_SPACING = 3; // Rows to skip between company entries (e.g., if each company takes 3 rows)
 const finalColumnLetters = "AG";
-
 
 const UNIFIED_MAPPINGS = {
   // --- Top-Level Identifiers ---
