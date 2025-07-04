@@ -8,7 +8,7 @@ function getSingleCompany(sheet, targetCompanyName) {
   const nameColumnRange = sheet.getRange(`${nameColumnLetter}:${nameColumnLetter}`);
 
   // --- Step 2: Use TextFinder for a highly optimized search ---
-  const textFinder = nameColumnRange.createTextFinder(targetCompanyName);
+  const textFinder = nameColumnRange.createTextFinder(targetCompanyName.trim());
   textFinder.matchCase(false); // Make the search case-insensitive
   textFinder.matchEntireCell(true); // Ensures "Innovate" doesn't match "Innovate Inc."
   
@@ -92,15 +92,15 @@ function fillCompany(company, sheet) {
 
   // TODO create API call method for formatter (no grounding, different mdo)
   Logger.log("Collecting general company data...");
-  const extractedText1 = callGeminiAPI("gemini-2.5-pro-preview-03-25", getSearchCompanyInfoPrompt(companyName, companyWebsite), true);
+  const extractedText1 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyInfoPrompt(companyName, companyWebsite), true);
   const geminiJSON1 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyInfoPrompt(extractedText1), false);
 
   Logger.log("Collecting company key metrics...");
-  const extractedText2 = callGeminiAPI("gemini-2.5-pro-preview-03-25", getSearchCompanyMetricsPrompt(companyName, companyWebsite), true);
+  const extractedText2 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyMetricsPrompt(companyName, companyWebsite), true);
   const geminiJSON2 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyMetricsPrompt(extractedText2), false);
 
   Logger.log("Collecting company funding info...");
-  const extractedText3 = callGeminiAPI("gemini-2.5-pro-preview-03-25", getSearchCompanyFundingPrompt(companyName, companyWebsite), true);
+  const extractedText3 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyFundingPrompt(companyName, companyWebsite), true);
   const geminiJSON3 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyFundingPrompt(extractedText3), false);
 
   Logger.log('Finished search');

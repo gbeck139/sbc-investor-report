@@ -38,6 +38,11 @@ function callGeminiAPI(model, prompt, grounding) {
 
   for (let i = 0; i < maxRetries; i++) {
     try {
+      if (model == 'gemini-2.5-pro' && i > 1){
+        model = 'gemini-2.5-pro-preview-03-25'
+        url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${getGeminiApiKey()}`;
+      }
+
       const apiResponse = UrlFetchApp.fetch(url, options);
       const responseCode = apiResponse.getResponseCode();
       const responseBody = apiResponse.getContentText();

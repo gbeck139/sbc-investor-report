@@ -1,3 +1,61 @@
+function synthesizeAndCreateDeck(companies){
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
+  let finalSheet = spreadsheet.getSheetByName(FINAL_SHEET);
+  templateId = '1HphW-gruSiMlAeKmbH52RHkgXOp3GwIUZuE8ZqlQ0Uo';
+
+  presentation = createNewDeckFromTemplate(templateId, 'Test');
+
+  for(const name of companies){
+      data = geminiSynthesis(sheet, finalSheet, name)
+      const slide = copySlideToPresentation(templateId, 0, presentation);
+      generateCompanySlideDeck(slide, data);
+  }
+  writeToCell(finalSheet, UNIFIED_MAPPINGS['Report Link'].column, getFinalRow(company.sheetRow), presentation.getUrl());
+}
+
+
+
+
+
+function geminiSynthesis(sheet, finalSheet, name){
+  Logger.log(`Starting synthesis for ${name}`);
+  const company = getSingleCompany(sheet, name);
+
+  let finalRow = getFinalRow(company.sheetRow);
+
+  fillCompany(company, sheet);
+  data = callGeminiAPI("gemini-2.5-pro", getSynthesizeFinalCompanyPrompt(company), false);
+  result = callGeminiAPI("gemini-2.0-flash", getFormatFinalCompanyPrompt(data));
+  parsed = JSON.parse(result);
+
+  parseAndWriteGeminiOutput(finalSheet, parsed, finalRow, company);
+  writeToCell(finalSheet, UNIFIED_MAPPINGS['Name'].column, finalRow, company.name);
+  writeToCell(finalSheet, UNIFIED_MAPPINGS['Website'].column, finalRow, company.website);
+  writeToCell(finalSheet, UNIFIED_MAPPINGS['Sector'].column, finalRow, company.sector);
+  finalData = readRowData(sheetFinal, finalRow);
+  return finalData
+}
+
+function getFinalRow(masterRow){
+  return Math.floor((masterRow-HUBSPOT_ROW)/ROW_SPACING)+COMPANY_UPDATE_ROW
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function formatDataForSynthesis(firstRow) {

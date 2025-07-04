@@ -1,3 +1,5 @@
+
+
 /**
  * Finds and replaces all {{placeholder}} tags throughout an entire Google Slides presentation
  * with values from a provided JSON data object.
@@ -27,10 +29,10 @@ function generateCompanySlideDeck(slide, jsonData) {
   Logger.log('Presentation population complete.');
 }
 
-function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destinationPresentationId) {
+function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destination) {
   // 1. Open the source and destination presentations
   const sourcePresentation = SlidesApp.openById(sourcePresentationId);
-  const destinationPresentation = SlidesApp.openById(destinationPresentationId);
+  const destinationPresentation = destination;
 
   // 2. Get the specific template slide from the source
   const templateSlide = sourcePresentation.getSlides()[sourceSlideIndex];
@@ -49,21 +51,15 @@ function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destina
 }
 
 
-function copyVerticalTemplate() {
-  var TEMPLATE_ID = '1HphW-gruSiMlAeKmbH52RHkgXOp3GwIUZuE8ZqlQ0Uo';
+function createNewDeckFromTemplate(templateId, newFileName) {
   
   // Create a copy
-  var templateFile = DriveApp.getFileById(TEMPLATE_ID);
-  var newFile = templateFile.makeCopy('TEST One Pager');
+  var templateFile = DriveApp.getFileById(templateId);
+  var newFile = templateFile.makeCopy(newFileName);
   
   // Open the new presentation
   var presentation = SlidesApp.openById(newFile);
   // // 4. --- SAVE AND RETURN ---
-  Logger.log(`Successfully created Google Slides report: ${presentation.getUrl()}`);
+  Logger.log(`Successfully created new Google Slides deck`);
   return presentation
-}
-
-function getTestDeck(){
-  var presentation = SlidesApp.openById('18bDOGtxxf21olSUD0JzJ1jULGNrO-oa0iiCAQ8L_Dgw');
-  return presentation;
 }

@@ -148,7 +148,7 @@ function runProcesses(options) {
 
       Logger.log("Grant got cream cheese on the motherboard sorry!!")
 
-      // Replace with method call  -- createOnePager(options.companies);
+      synthesizeAndCreateDeck(options.companies);
 
     }
 
