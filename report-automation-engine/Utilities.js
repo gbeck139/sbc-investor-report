@@ -5,14 +5,8 @@ function getSingleCompany(sheet, targetCompanyName) {
     Logger.log('Error: "Name" column not defined in UNIFIED_MAPPINGS.');
     return null;
   }
-  const nameColumnRange = sheet.getRange(`${nameColumnLetter}:${nameColumnLetter}`);
-
-  // --- Step 2: Use TextFinder for a highly optimized search ---
-  const textFinder = nameColumnRange.createTextFinder(targetCompanyName.trim());
-  textFinder.matchCase(false); // Make the search case-insensitive
-  textFinder.matchEntireCell(true); // Ensures "Innovate" doesn't match "Innovate Inc."
   
-  const foundCell = textFinder.findNext();
+  foundCell = getCompanyRow(sheet, nameColumnLetter, targetCompanyName);
 
   // --- Step 3: Process the result ---
   if (foundCell) {
@@ -30,149 +24,15 @@ function getSingleCompany(sheet, targetCompanyName) {
   }
 }
 
-// IN DEV
-function getAllCompanies(sheet) {
-  Logger.log(`Getting all companies with refactored function.`);
+function getCompanyRow(sheet, nameColumnLetter, targetCompanyName){
+  const nameColumnRange = sheet.getRange(`${nameColumnLetter}:${nameColumnLetter}`);
+
+  // --- Step 2: Use TextFinder for a highly optimized search ---
+  const textFinder = nameColumnRange.createTextFinder(targetCompanyName.trim());
+  textFinder.matchCase(false); // Make the search case-insensitive
+  textFinder.matchEntireCell(true); // Ensures "Innovate" doesn't match "Innovate Inc."
   
-  // --- Step 1: Define required data and get columns from UNIFIED_MAPPINGS ---
-  const requiredFields = {
-    name: UNIFIED_MAPPINGS['Name'].column,         // e.g., 'A'
-    website: UNIFIED_MAPPINGS['Website'].column,   // e.g., 'D'
-    sector: UNIFIED_MAPPINGS['Sector'].column      // e.g., 'C'
-  };
-
-  // --- Step 2: Dynamically determine the full range to read ---
-  // This ensures we read all necessary columns in one go, regardless of their order.
-  const columnChars = Object.values(requiredFields); // ['A', 'D', 'C']
-  const startColChar = String.fromCharCode(Math.min(...columnChars.map(c => c.charCodeAt(0)))); // 'A'
-  const endColChar = String.fromCharCode(Math.max(...columnChars.map(c => c.charCodeAt(0))));   // 'D'
-  
-  const lastRow = sheet.getLastRow();
-  const rangeToRead = sheet.getRange(`${startColChar}${COMPANY_UPDATE_ROW}:${endColChar}${lastRow}`);
-  const values = rangeToRead.getValues();
-  Logger.log(`Dynamically determined range to read: ${startColChar}:${endColChar}`);
-
-  // --- Step 3: Create a map from jsonKey to its index within our read data ---
-  // This replaces the brittle, manual index calculations.
-  const indexMap = {
-    name: requiredFields.name.charCodeAt(0) - startColChar.charCodeAt(0),       // e.g., 'A'-'A' = 0
-    website: requiredFields.website.charCodeAt(0) - startColChar.charCodeAt(0), // e.g., 'D'-'A' = 3
-    sector: requiredFields.sector.charCodeAt(0) - startColChar.charCodeAt(0)   // e.g., 'C'-'A' = 2
-  };
-  
-  const companies = [];
-  for (let i = 0; i < values.length; i++) {
-    const currentRowInSheet = i + COMPANY_UPDATE_ROW;
-
-    // --- Step 4: Keep the core business logic, but use the robust indexMap ---
-    // This logic is unchanged because it's correct.
-    if (currentRowInSheet % ROW_SPACING === 0) {
-      const rowData = values[i];
-      
-      // Pull data using our reliable index map. No more hardcoded `[0]`.
-      const name = rowData[indexMap.name] ? String(rowData[indexMap.name]).trim() : '';
-      const website = rowData[indexMap.website] ? String(rowData[indexMap.website]).trim() : '';
-      const sector = rowData[indexMap.sector] ? String(rowData[indexMap.sector]).trim() : '';
-      
-      if (name !== '') {
-        companies.push({ name, website, sector, sheetRow: currentRowInSheet });
-      }
-    }
-  }
-
-  Logger.log(`Found ${companies.length} companies to process from the sheet.`);
-  return companies;
-}
-
-function fillCompany(company, sheet) {
-  const companyName = company.name;
-  const companyWebsite = company.website;
-  const currentRow = company.sheetRow+(GEMINI_ROW-HUBSPOT_ROW);
-  Logger.log(currentRow);
-
-  // TODO create API call method for formatter (no grounding, different mdo)
-  Logger.log("Collecting general company data...");
-  const extractedText1 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyInfoPrompt(companyName, companyWebsite), true);
-  const geminiJSON1 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyInfoPrompt(extractedText1), false);
-
-  Logger.log("Collecting company key metrics...");
-  const extractedText2 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyMetricsPrompt(companyName, companyWebsite), true);
-  const geminiJSON2 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyMetricsPrompt(extractedText2), false);
-
-  Logger.log("Collecting company funding info...");
-  const extractedText3 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyFundingPrompt(companyName, companyWebsite), true);
-  const geminiJSON3 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyFundingPrompt(extractedText3), false);
-
-  Logger.log('Finished search');
-
-  if (geminiJSON1) {
-    try {
-      Logger.log("Parsing data...");
-      const parsedData1 = JSON.parse(geminiJSON1); // Attempt to parse the JSON string
-      const parsedData2 = JSON.parse(geminiJSON2);
-      const parsedData3 = JSON.parse(geminiJSON3);
-      Logger.log("Storing results...");
-      parseAndWriteGeminiOutput(sheet, parsedData1, currentRow); // Pass the parsed object
-      parseAndWriteGeminiOutput(sheet, parsedData2, currentRow);
-      parseAndWriteGeminiOutput(sheet, parsedData3, currentRow);
-    } catch (e) {
-      Logger.log(`ERROR: Could not parse Gemini output for ${companyName}. Error: ${e.message}`);
-      // Mark cell in sheet as "JSON Parse Error"
-      const errorColumn = UNIFIED_MAPPINGS['Company Summary']; // Use Company Summary for errors
-      if (errorColumn) {
-        sheet.getRange(errorColumn + currentRow).setValue('JSON_PARSE_ERROR');
-      }
-    }
-  } else {
-    Logger.log(`No valid Gemini output for ${companyName}. Skipping row ${currentRow}.`);
-    // Mark cell in sheet as "Gemini Error"
-    const errorColumn = UNIFIED_MAPPINGS['Company Summary']; // Use Company Summary for errors
-    if (errorColumn) {
-      sheet.getRange(errorColumn + currentRow).setValue('GEMINI_SEARCH_ERROR');
-    }
-  }
-
-  Utilities.sleep(1000); // Be mindful of API rate limits
-}
-
-// IN DEV
-function fillAllCompanies() {
-  const ui = SpreadsheetApp.getUi();
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const workingSheet = spreadsheet.getSheetByName(MASTER_SHEET);
-
-  if (!workingSheet) {
-    ui.alert('Error', `Sheet named '${MASTER_SHEET}' not found. Please ensure it exists.`, ui.ButtonSet.OK);
-    return;
-  }
-
-  try {
-    // Get companies from the Sheet itself
-    const allCompanies = getAllCompanies(workingSheet);
-
-    if (allCompanies.length === 0) {
-      ui.alert('No Companies Found', 'No companies with names in Column A were found in the sheet.', ui.ButtonSet.OK);
-      return;
-    }
-
-    for (let i = 0; i < allCompanies.length; i++){
-      try {
-        fillCompany(allCompanies[i], workingSheet);
-      } catch (innerError) {
-        Logger.log(`Error processing ${companyName} (index ${i}): ${innerError.message}. Skipping to next company.`);
-        const errorColumn = COLUMN_MAPPINGS['Company Website'];
-        if (errorColumn) {
-            workingSheet.getRange(errorColumn + currentRow).setValue(`ERROR: ${innerError.message.substring(0, Math.min(innerError.message.length, 50))}...`);
-        }
-      }
-    }
-
-    ui.alert('Success', `Completed Gemini public data search for all ${allCompanies.length} companies.`, ui.ButtonSet.OK);
-
-  } catch (e) {
-    Logger.log('Critical Error in performGeminiSearchAndPopulateSheet: ' + e.toString());
-    ui.alert('Error', 'A critical error occurred. Check logs for details: ' + e.toString(), ui.ButtonSet.OK);
-  }
+  return textFinder.findNext(); 
 }
 
 function readRowData(sheet, rowNumber) {
@@ -303,4 +163,67 @@ function normalizeFields(record) {
                                  (raisingVal === 'no') ? false : 'Undisclosed';
 
   return record;
+}
+
+
+
+
+
+
+/**
+ * Fetches a company logo from the Logo API.
+ *
+ * @param {string} domain The domain of the company (e.g., "google.com").
+ * @return {Blob} The company logo as a blob, or null if not found.
+ */
+function getCompanyLogo(domain) {
+  // The endpoint for the Logo API.
+  const apiUrl = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
+  const backupURL = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://startupbootcamp.org&size=128`
+
+  try {
+    // Make a request to the API, muting error exceptions
+    const response = UrlFetchApp.fetch(apiUrl, {
+      muteHttpExceptions: true 
+    });
+
+    // Get the blob if the request was successful.
+    if (response.getResponseCode() == 200) {
+      const logoBlob = response.getBlob();
+      return logoBlob;
+    } else {
+      console.error(`Could not fetch logo for ${domain}. Utilizing SBC logo instead. Status code: ${response.getResponseCode()}.`)
+      return UrlFetchApp.fetch(backupURL).getBlob();
+;
+    }
+  } catch (error) {
+    // Log any other errors that occur during the fetch.
+    console.error(`An error occurred while fetching the logo for ${domain}: ${error.toString()}`);
+    return UrlFetchApp.fetch(backupURL).getBlob;
+  }
+}
+
+/**
+ * Fetches a country flag from the FlagsAPI.
+ * @param {string} countryCode The 2-letter ISO country code (e.g., "US", "CA", "DE").
+ * @return {GoogleAppsScript.Base.Blob} The country flag as a blob, or null if not found.
+ */
+function getCountryFlag(countryCode) {
+  // Available styles ('flat' or 'shiny') and size (16, 24, 32, 48, 64).
+  const style = 'flat';
+  const size = '64';
+  const apiUrl = `https://flagsapi.com/${countryCode}/${style}/${size}.png`;
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, { muteHttpExceptions: true });
+    if (response.getResponseCode() == 200) {
+      return response.getBlob();
+    } else {
+      console.error(`Could not fetch flag for ${countryCode}. Status code: ${response.getResponseCode()}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`An error occurred while fetching the flag for ${countryCode}: ${error.toString()}`);
+    return null;
+  }
 }

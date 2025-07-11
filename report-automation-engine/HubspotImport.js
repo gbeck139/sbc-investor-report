@@ -9,31 +9,16 @@
  */
 
 // --- HubSpot Fetching Configuration ---
-// Mapping of HubSpot internal property names to where they *initially* go in the sheet.
-const HUBSPOT_COLUMN_MAPPINGS = {
-  'name': 'A',
-  'n1_4__company___industry': 'C',
-  'website': 'D',
-  'n5_3_05__updated_company_description': 'E',
-  'n5_3_06__current_number_of_full_time_employees': 'F',
-  'n5_3_09__total_amount_of_money_raised_to_date': 'I',
-  'n5_0_06__alumni___latest_funding_round___date': 'L',
-  'n5_0_08__alumni___raising_round': 'M',
-  'n5_3_10__how_much_are_they_currently_fundraising_': 'P',
-  'n5_3_11__how_much_out_of_this_amount_is_already_committed': 'Q',
-  'n5_2_09__what_are_the_basic_terms_of_this_raise': 'U',
-  'n5_03_00__company_valuation': 'V',
-  'n5_3_12__what_is_your_current_annual_recurring_revenue__arr_': 'W',
-  'n5_3_11__what_is_your_current_company_runway': 'X',
-  'n5_3_10__last_6_month_highlights': 'AB',
-  // 'country__2' : ''
-
-};
-
 const rowMappings = JSON.parse(SCRIPT_PROPS.getProperty('ROW_MAPPINGS'));
 
 // Values to fetch from HubSpot (derived from COLUMN_MAPPINGS keys)
-const HUBSPOT_FETCH_VALS = Object.keys(HUBSPOT_COLUMN_MAPPINGS);
+const HUBSPOT_FETCH_VALS = []; 
+Object.keys(UNIFIED_MAPPINGS).forEach( property => {
+  const val = UNIFIED_MAPPINGS[property].hubspot;
+  if (val)
+    HUBSPOT_FETCH_VALS.push(val);
+});
+
 HUBSPOT_FETCH_VALS.push('program_name') // Add cohort for filtering later
 
 // Filters for fetching companies from HubSpot
@@ -62,7 +47,8 @@ const HUBSPOT_FILTER_VALS = [
  * Handles the function calls for gathering data from hubspot, and then passing that information into a new sheet.
  */
 function createSheets(updateList = ['needenergy']) {
-  mapCompanies();
+
+  const companies = getCompaniesFromHs();
   const updateSet = new Set(updateList.map(name => name.toLowerCase()));
 
   let workingSheet;
@@ -79,14 +65,10 @@ function createSheets(updateList = ['needenergy']) {
   }
 
   // Write each companies data if specified in updateList
-  HS_COMPANIES.forEach((company) => {
+  companies.forEach((company) => {
     let name = company.properties.name.toLowerCase();
-    if (updateSet.has(name)) {
-      Logger.log(rowMappings);
-      Logger.log(name);
+    if (updateSet.has(name)) 
       writeToRow(workingSheet, company.properties, rowMappings[name] + 1);
-
-    }
   }
   );
 }

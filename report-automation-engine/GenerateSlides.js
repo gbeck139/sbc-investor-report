@@ -10,6 +10,8 @@
  *   Example: { name: "My Company", headquarters: "New York" }
  */
 function generateCompanySlideDeck(slide, jsonData) {
+
+ 
   // 1. Loop through each key in the provided JSON data.
   for (const key in jsonData) {
     // Get the value for the current key. If the value is null or undefined, default to an empty string.
@@ -25,11 +27,20 @@ function generateCompanySlideDeck(slide, jsonData) {
   // 2. (Optional but Recommended) Clean up any remaining placeholders that were not in the JSON data.
   // This prevents seeing "{{some_unused_tag}}" on the final slides.
   slide.replaceAllText(/\{\{.*?\}\}/g, '');
-  
+
+  // Update the images
+  for(const img of slide.getImages()){
+    const blob = jsonData[img.getDescription()];
+    if(blob)
+      img.replace(jsonData[img.getDescription()]);
+    else
+      img.remove();
+  }
+
   Logger.log('Presentation population complete.');
 }
 
-function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destination) {
+function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destination) { 
   // 1. Open the source and destination presentations
   const sourcePresentation = SlidesApp.openById(sourcePresentationId);
   const destinationPresentation = destination;
@@ -58,7 +69,7 @@ function createNewDeckFromTemplate(templateId, newFileName) {
   var newFile = templateFile.makeCopy(newFileName);
   
   // Open the new presentation
-  var presentation = SlidesApp.openById(newFile);
+  var presentation = SlidesApp.openById(newFile.getId());
   // // 4. --- SAVE AND RETURN ---
   Logger.log(`Successfully created new Google Slides deck`);
   return presentation

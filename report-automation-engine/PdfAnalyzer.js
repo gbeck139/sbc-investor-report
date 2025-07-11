@@ -24,7 +24,7 @@ create "working" docs on how to use and maintain the drive
 
 // The prompt for Gemini. The formatting is defined in the generationConfig.
 const PROMPT = `You are a helpful assistant that extracts information from company update PDFs.
-Based on the provided PDF file, extract the required information.
+Based on the provided PDF files, extract the required information.
 You are not to find any additional information or create information, only extract. You may paraphrase what the pdf says, but do not search or hallucinate.
 If you cannot find a specific piece of information, leave the corresponding field empty or null.`;
 
@@ -41,8 +41,33 @@ const cohortFolders = JSON.parse(SCRIPT_PROPS.getProperty(`COHORT_FOLDERS`));
 /**
  * Main function to initiate the PDF extraction process.
  */
-function analyzePDFs(updateCompanies, updateCohorts) {
+function analyzePDFs(updateCompanies = ['Xempla'], updateCohorts = ['EA18']) {
   const companyPDFs = {};
+
+  // Use Drive API to search for company update folders directly
+  const companyFolderMap = searchCompanyUpdateFolders(updateCompanies);
+
+  // For each company, get the most recent PDF if folder was found
+  for (const company of updateCompanies) {
+    const companyKey = company.toLowerCase();
+    const folderId = companyFolderMap[companyKey];
+
+    if (folderId) {
+      Logger.log(`Found folder for ${company}: ${folderId}`);
+      const recentPDFs = getCompanyPDFs(folderId);
+
+      if (recentPDFs.length > 0 && companyMappings[companyKey]) 
+            companyPDFs[companyKey] = recentPDFs;
+          
+      else  
+        Logger.log(`No PDF found in folder for company: ${company}`);
+      }
+    else 
+      Logger.log(`No Company Updates folder found for: ${company}`);
+    
+  }
+
+  /* COMMENTED OUT - OLD FOLDER TRAVERSAL CODE
   const cohortCheck = {}
   const companySet = new Set(updateCompanies.map(name => name.toLowerCase()));
 
@@ -87,7 +112,6 @@ function analyzePDFs(updateCompanies, updateCohorts) {
 
       const recentPDF = getCompanyPDF(pdfFolder.getId());
 
-
       // If a PDF is found and is for a company we are mapping, store it to be processed
       if (recentPDF && companyMappings[companyName]) {
         Logger.log(`Found pdf for company ${companyName} titled: ${recentPDF}. This will be placed on row ${companyMappings[companyName]}`)
@@ -95,16 +119,17 @@ function analyzePDFs(updateCompanies, updateCohorts) {
       }
     }
   }
+  */
 
   // For each of the companies we want to update with a PDF, process the PDF files.
   for (const company of updateCompanies) {
-    const updatePDF = companyPDFs[company.toLowerCase()];
+    const updatePDFs = companyPDFs[company.toLowerCase()];
 
-    if (updatePDF) {
-      Logger.log(`Processing PDF for ${company}: ${updatePDF.getName()}`);
+    if (updatePDFs && updatePDFs.length > 0) {
+      Logger.log(`Processing PDFs for ${company}: ${updatePDFs}`);
 
       // Call Gemini to extract data from the PDF and write to the sheet
-      const geminiData = extractUsingGemini(updatePDF);
+      const geminiData = extractUsingGemini(updatePDFs);
       if (geminiData) {
         const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MASTER_SHEET);
         writeGeminiDataToSheet(company, geminiData, sheet);
@@ -120,7 +145,7 @@ function analyzePDFs(updateCompanies, updateCohorts) {
 /**
  *  Searches through the specified parent (cohort) folder to collect a list of startup folders.
  * 
- *  @param {Folder} parentFolder - The parent Google Drive folder to search within.
+ *  @param {Folder} parentFolder - The parent Google Drive folder to search within ie. EN21-23.
  *  @return {Folder[]|null} An array of PDF folders for startups, or null if none found.
  */
 function getStartupPDFFolders(parentFolder) {
@@ -128,12 +153,20 @@ function getStartupPDFFolders(parentFolder) {
   try {
     const subFolders = parentFolder.getFolders();
     while (subFolders.hasNext()) {
+
+      // Gather all of the folders that are Startup collections
       const subFolder = subFolders.next();
       if (subFolder.getName().includes('Startups')) {
         const startupFolders = subFolder.getFolders();
+
+        // Iterate through all of the different startups 
         while (startupFolders.hasNext()) {
           const startupFolder = startupFolders.next();
-          if (startupFolder.getName().toLowerCase().includes('archives')) continue;
+
+          // Skip archives
+          if (startupFolder.getName().toLowerCase().includes('archives')) 
+            continue;
+          
           const pdfFolderName = startupFolder.getName() + ' - Company Updates';
           const pdfFolder = startupFolder.getFoldersByName(pdfFolderName);
           if (pdfFolder.hasNext()) finalFolders.push(pdfFolder.next());
@@ -152,9 +185,13 @@ function getStartupPDFFolders(parentFolder) {
  * @param {string} folderID The ID of the Google Drive folder to search for PDF files.
  * @return {File|null} The most recently updated PDF file, or null if none found or on error.
  */
-function getCompanyPDF(folderID) {
-  let mostRecentPDF = null;
+function getCompanyPDFs(folderID) {
+  const recentPdfs = [];
+  const allPdfs = []; 
   let files;
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
   try {
     const folder = DriveApp.getFolderById(folderID);
     files = folder.getFiles();
@@ -162,13 +199,26 @@ function getCompanyPDF(folderID) {
     Logger.log(`Error accessing folder with ID ${folderID}: ${e.message}`);
     return null;
   }
+
   while (files.hasNext()) {
     const file = files.next();
-    if (file.getMimeType() === MimeType.PDF && (!mostRecentPDF || file.getLastUpdated() > mostRecentPDF.getLastUpdated())) {
-      mostRecentPDF = file;
+    if (file.getMimeType() === MimeType.PDF) {
+      allPdfs.push(file);
+      // Check if the PDF was updated in the last 6 months
+      if (file.getLastUpdated().getTime() >= sixMonthsAgo.getTime()) 
+        recentPdfs.push(file);
+      
     }
   }
-  return mostRecentPDF;
+
+  // If 2 or more pdfs in the last 6 months, return them all
+  if (recentPdfs.length >= 2) 
+        return recentPdfs;
+  else {
+    // Otherwise, sort what we have decending and return two most recent
+    allPdfs.sort((a, b) => b.getLastUpdated().getTime() - a.getLastUpdated().getTime());
+    return allPdfs.slice(0, 2);
+  }
 }
 
 /**
@@ -176,16 +226,21 @@ function getCompanyPDF(folderID) {
  * @param {File} pdfFile The PDF file to convert.
  * @return {string|null} A stringified JSON payload or null on error.
  */
-function generateGeminiPayload(pdfFile) {
-  let pdfBlob;
-  try {
-    pdfBlob = pdfFile.getBlob();
-  } catch (e) {
-    Logger.log(`Error getting blob from PDF file: ${e.message}`);
-    return null;
-  }
-
-  const pdfBase64 = Utilities.base64Encode(pdfBlob.getBytes());
+function generateGeminiPayload(pdfFiles) {
+  const parts = [
+    {text: PROMPT}
+  ];
+ pdfFiles.forEach(pdfFile => {
+    try {
+      const pdfBlob = pdfFile.getBlob();
+      const pdfBase64 = Utilities.base64Encode(pdfBlob.getBytes());
+      parts.push({
+        inline_data: { mime_type: "application/pdf", data: pdfBase64 }
+      });
+    } catch (e) {
+      Logger.log(`Error getting blob from PDF file: ${e.message}`);
+    }
+  });
 
   // Set the proper formatting from COLUMN_MAPPINGS keys
   const formatConfig = {};
@@ -216,10 +271,7 @@ function generateGeminiPayload(pdfFile) {
   const payload = {
     contents: [{
       role: "user",
-      parts: [
-        { text: PROMPT },
-        { inline_data: { mime_type: "application/pdf", data: pdfBase64 } }
-      ]
+      parts: parts // Constructed dynamically above
     }],
     generationConfig,
   };
@@ -232,8 +284,8 @@ function generateGeminiPayload(pdfFile) {
  * @param {File} pdfFile The file of the PDF to process.
  * @return {Object|null} The parsed JSON object from Gemini or null on error.
  */
-function extractUsingGemini(pdfFile) {
-  const payload = generateGeminiPayload(pdfFile);
+function extractUsingGemini(pdfFiles) {
+  const payload = generateGeminiPayload(pdfFiles);
 
   if (!payload) {
     Logger.log("Failed to generate payload for Gemini.");
@@ -274,7 +326,79 @@ function extractUsingGemini(pdfFile) {
 }
 
 
-// REPLACE REPLACE REPLACE REPLACE  - CONSIDER REPLACING WITH GRANTS'
+/**
+ * Search for Company Updates folders using Drive API for specified companies
+ * @param {Array} updateCompanies - Array of company names to search for
+ * @return {Object} Map of company names (lowercase) to folder IDs, or null if not found
+ */
+function searchCompanyUpdateFolders(updateCompanies) {
+  const companyFolderMap = {};
+  const SHARED_DRIVE_ID = '0ANlAdFJelSKxUk9PVA'; 
+
+  for (const company of updateCompanies) {
+    const companyKey = company.toLowerCase();
+    const searchName = `${company} - Company Updates`;
+    
+    Logger.log(`Searching for folder: ${searchName}`);
+    
+    try {
+      // Search for folders with the exact company update folder name
+      const query = `mimeType='application/vnd.google-apps.folder' and trashed=false and name contains '${company} - Company Updates'`;
+      const response = Drive.Files.list({
+        q: query,
+        driveId: SHARED_DRIVE_ID,
+        corpora: 'drive',
+        includeItemsFromAllDrives: true,
+        supportsAllDrives: true,
+        fields: 'files(id,name)'
+      });
+
+      if (response.files && response.files.length > 0) {
+        // Take the first match
+        companyFolderMap[companyKey] = response.files[0].id;
+        Logger.log(`Found folder for ${company}: ${response.files[0].name}`);
+      } else {
+        // Try with case variations if exact match fails
+        const caseVariations = [
+          `${company.toLowerCase()} - Company Updates`,
+          `${company.toUpperCase()} - Company Updates`,
+          `${company}`
+        ];
+        
+        let found = false;
+        for (const variation of caseVariations) {
+          const varQuery = `mimeType='application/vnd.google-apps.folder' and trashed=false and name='${variation}'`;
+          const varResponse = Drive.Files.list({
+            q: varQuery,
+            driveId: SHARED_DRIVE_ID,
+            corpora: 'drive',
+            includeItemsFromAllDrives: true,
+            supportsAllDrives: true,
+            fields: 'files(id,name)'
+          });
+          
+          if (varResponse.files && varResponse.files.length > 0) {
+            companyFolderMap[companyKey] = varResponse.files[0].id;
+            Logger.log(`Found folder for ${company} with variation: ${variation}, ID: ${varResponse.files[0].id}`);
+            found = true;
+            break;
+          }
+        }
+        
+        if (!found) {
+          companyFolderMap[companyKey] = null;
+          Logger.log(`No folder found for company: ${company}`);
+        }
+      }
+    } catch (e) {
+      Logger.log(`Error searching for ${company}: ${e.message}`);
+      companyFolderMap[companyKey] = null;
+    }
+  }
+
+  return companyFolderMap;
+}
+
 /**
  * Writes the extracted information from Gemini to the Google Sheet.
  * @param {string} company The name of the company.

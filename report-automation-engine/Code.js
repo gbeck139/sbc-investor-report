@@ -19,7 +19,7 @@ function mapCompanies() {
   getCompaniesFromHs().forEach((company, i) => {
     const cohort = company.properties.program_name;
     const name = company.properties.name;
-    
+
     rowMaps[name.toLowerCase()] = ROW + (ROW_SPACING * i);
 
     if (cohort in COHORT_LIST)
@@ -111,6 +111,100 @@ function containsCohort(folderName, cohortName) {
   return folderName.startsWith(cohortMatch[0]);
 }
 
+// The name of the function to be triggered every minute
+const TARGET_FUNCTION_NAME = 'companyTrigger';
+
+/**
+ * Creates a new time-driven trigger that runs every minute.
+ * It's designed to be called from a web app's front-end using google.script.run.
+ * It first deletes any existing trigger for the target function to prevent duplicates.
+ */
+function createMinuteTrigger() {
+  try {
+    // Delete existing triggers before creating a new one.
+    deleteExistingTrigger();
+
+    // Create a new trigger to run the target function every minute.
+    ScriptApp.newTrigger(TARGET_FUNCTION_NAME)
+      .timeBased()
+      .everyMinutes(1)
+      .create();
+
+    Logger.log(`Successfully created a trigger for ${TARGET_FUNCTION_NAME} to run every minute.`);
+    // This return value can be sent back to your web app's success handler.
+    return `Success: Trigger created for ${TARGET_FUNCTION_NAME}.`;
+
+  } catch (e) {
+    Logger.log(`Error creating trigger: ${e.toString()}`);
+    // This error will be sent back to your web app's failure handler.
+    throw new Error(`Failed to create trigger. Error: ${e.message}`);
+  }
+}
+
+/**
+ * Finds and deletes any trigger that is set to run the target function.
+ * This is a helper function called by createMinuteTrigger to avoid creating duplicate triggers.
+ */
+function deleteExistingTrigger() {
+  try {
+    const allTriggers = ScriptApp.getProjectTriggers();
+    for (const trigger of allTriggers) {
+      if (trigger.getHandlerFunction() === TARGET_FUNCTION_NAME) {
+        ScriptApp.deleteTrigger(trigger);
+        Logger.log(`Deleted pre-existing trigger with ID: ${trigger.getUniqueId()}`);
+      }
+    }
+  } catch (e) {
+    Logger.log(`Error deleting trigger: ${e.toString()}`);
+    // We don't throw an error here because failing to delete an old trigger
+    // shouldn't necessarily stop the creation of a new one.
+  }
+}
+
+function companyTrigger() {
+
+  // Gather and parse the infromation to process from the properties
+  const options = JSON.parse(SCRIPT_PROPS.getProperty('PROCESS_QUEUE'));
+
+
+  const comps = options.companies;
+  // Upon the completion of all processes, delete the trigger and finish
+  if (comps.length === 0) {
+    deleteExistingTrigger();
+    return;
+  }
+
+  // Select just one company for now
+  const company = comps.splice(0, 1);
+
+  console.log(company, comps);
+
+  // Relog the options with one company removed
+  options.companies = comps;
+  SCRIPT_PROPS.setProperty('PROCESS_QUEUE', JSON.stringfiy(options));
+
+  // Run the selected methods for the controlled amount of companies passed by triggers
+  if (options.runPdf) {
+    console.log("Grant will look into it");
+    analyzePDFs(company, options.cohorts);
+  }
+
+  if (options.runGemini) {
+    console.log("You totally ran gemini")
+
+    geminiSearch(company);
+
+  }
+  if (options.runOnePager) {
+
+    console.log("Grant got cream cheese on the motherboard sorry!!")
+
+    synthesizeAndCreateDeck(company);
+  }
+
+
+}
+
 /**
  * The MAIN function called by the UI to start all processes.
  * It takes an options object from the frontend.
@@ -128,29 +222,19 @@ function runProcesses(options) {
       createSheets(options.companies);
     }
 
-    // --- Run PDF Extraction if selected ---
-    if (options.runPdf) {
-      logOutput.push("\n--- Running PDF Extraction ---");
+    // Check for already existing run options and update them.
+    const oldOptions = JSON.parse(SCRIPT_PROPS.getProperty('PROCESS_QUEUE'));
 
-      analyzePDFs(options.companies, options.cohorts);
-    }
+    oldOptions.companies.concat(options.companies);
+    oldOptions.runPdf = oldOptions.runPdf || options.runPdf;
+    oldOptions.runGemini = oldOptions.runGemini || options.runGemini;
+    oldOptions.runOnePager = oldOptions.runOnePager || options.runOnePager;
 
-    if (options.runGemini) {
-      logOutput.push("\n--- Running External Search ---");
+    // Store the options we want to process
+    SCRIPT_PROPS.setProperty('PROCESS_QUEUE', JSON.stringify(oldOptions));
 
-      Logger.log("You totally ran gemini")
-
-      geminiSearch(options.companies);
-
-    }
-    if (options.runOnePager) {
-      logOutput.push("\n--- Running OnePager Creation ---");
-
-      Logger.log("Grant got cream cheese on the motherboard sorry!!")
-
-      synthesizeAndCreateDeck(options.companies);
-
-    }
+    //Start triggering company selections which will scrape from script props
+    createMinuteTrigger();
 
     return logOutput.join('\n');
 

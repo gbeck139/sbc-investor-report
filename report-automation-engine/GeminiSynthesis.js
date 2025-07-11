@@ -2,27 +2,26 @@ function synthesizeAndCreateDeck(companies){
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
   let finalSheet = spreadsheet.getSheetByName(FINAL_SHEET);
-  templateId = '1HphW-gruSiMlAeKmbH52RHkgXOp3GwIUZuE8ZqlQ0Uo';
+  const templateId = '1ZpZxSyw9GQseP7tSLp5lLcLbSvkAkB45IzIY4g0sF5Q';
 
-  presentation = createNewDeckFromTemplate(templateId, 'Test');
+  const presentation = createNewDeckFromTemplate(templateId, 'Test');
 
   for(const name of companies){
-      data = geminiSynthesis(sheet, finalSheet, name)
+      data = geminiSynthesis(sheet, finalSheet, name, presentation)
       const slide = copySlideToPresentation(templateId, 0, presentation);
       generateCompanySlideDeck(slide, data);
   }
-  writeToCell(finalSheet, UNIFIED_MAPPINGS['Report Link'].column, getFinalRow(company.sheetRow), presentation.getUrl());
 }
 
 
 
 
 
-function geminiSynthesis(sheet, finalSheet, name){
+function geminiSynthesis(sheet, finalSheet, name, presentation){
   Logger.log(`Starting synthesis for ${name}`);
   const company = getSingleCompany(sheet, name);
 
-  let finalRow = getFinalRow(company.sheetRow);
+  let finalRow = Math.floor((company.sheetRow-HUBSPOT_ROW)/ROW_SPACING)+COMPANY_UPDATE_ROW;
 
   fillCompany(company, sheet);
   data = callGeminiAPI("gemini-2.5-pro", getSynthesizeFinalCompanyPrompt(company), false);
@@ -33,29 +32,10 @@ function geminiSynthesis(sheet, finalSheet, name){
   writeToCell(finalSheet, UNIFIED_MAPPINGS['Name'].column, finalRow, company.name);
   writeToCell(finalSheet, UNIFIED_MAPPINGS['Website'].column, finalRow, company.website);
   writeToCell(finalSheet, UNIFIED_MAPPINGS['Sector'].column, finalRow, company.sector);
-  finalData = readRowData(sheetFinal, finalRow);
+  writeToCell(finalSheet, UNIFIED_MAPPINGS['Report Link'].column, finalRow, presentation.getUrl());
+  finalData = readRowData(finalSheet, finalRow);
   return finalData
 }
-
-function getFinalRow(masterRow){
-  return Math.floor((masterRow-HUBSPOT_ROW)/ROW_SPACING)+COMPANY_UPDATE_ROW
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 function formatDataForSynthesis(firstRow) {
@@ -75,8 +55,7 @@ function formatDataForSynthesis(firstRow) {
   const finalJson = {
     name: hubspotData.name || internalData.name || '', // Use data from hubspotData, fallback to internalData
     website: hubspotData.website || internalData.website || '',
-    sector: hubspotData.sector || internalData.sector || '',
-    
+    sector: hubspotData.sector || internalData.sector || '',    
     // The nested data is clean and consistently structured
     sources: {
         hubspot: hubspotData,
