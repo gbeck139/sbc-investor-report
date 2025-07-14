@@ -74,7 +74,7 @@ function fillCompany(company, sheet) {
     }
   }
 
-  Utilities.sleep(1000); // Be mindful of API rate limits
+  Utilities.sleep(1000);
 }
 
 // Generic instructions for the Gemini search prompts.

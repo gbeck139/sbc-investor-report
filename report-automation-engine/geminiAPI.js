@@ -144,7 +144,6 @@ function addCitations(candidate) {
             .map(i => {
                 const title = chunks[i]?.web?.title;
                 if (title) {
-                    // This creates a markdown-style link for clarity
                     return `(${title})`; 
                 }
                 return null;
@@ -192,12 +191,9 @@ function cleanJsonString(rawText) {
       cleanText = cleanText.substring(3);
     }
   }
-
-  // Now, reliably handle the closing fence at the end of the string
   if (cleanText.endsWith("```")) {
     cleanText = cleanText.slice(0, -3);
   }
 
-  // Return the cleaned text, trimmed again to remove any final whitespace
   return cleanText.trim();
 }

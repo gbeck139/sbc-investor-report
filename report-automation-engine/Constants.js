@@ -24,8 +24,10 @@ function getGeminiApiKey() {
 }
 
 // --- Drive Config ---
-const DRIVE_IDS = ['0ANlAdFJelSKxUk9PVA'];
-const TEMPLATE_ID = '1ZpZxSyw9GQseP7tSLp5lLcLbSvkAkB45IzIY4g0sF5Q';  
+// Your drive ID here
+const DRIVE_IDS = [''];
+// Your template ID here
+const TEMPLATE_ID = '';  
 
 // --- Sheet Configuration ---
 const MASTER_SHEET = 'Master Sheet'; // Name of the sheet to update/create

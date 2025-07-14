@@ -199,18 +199,15 @@ function companyTrigger() {
 
   // Run the selected methods for the controlled amount of companies passed by triggers
   if (workingOps.runPdf) {
-    console.log("Grant will look into it");
 
     analyzePDFs(company);
   }
 
   if (workingOps.runGemini) {
-    console.log("You totally ran gemini");
 
     geminiSearch(company);
   }
   if (workingOps.runSynthesis) {
-    console.log("Grant got cream cheese on the motherboard sorry!!");
 
     synthesizeData(company);
   }
