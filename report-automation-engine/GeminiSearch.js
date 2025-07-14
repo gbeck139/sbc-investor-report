@@ -13,9 +13,7 @@ function fillCompany(company, sheet) {
   const companyName = company.name;
   const companyWebsite = company.website;
   const currentRow = company.sheetRow+(GEMINI_ROW-HUBSPOT_ROW);
-  Logger.log(currentRow);
 
-  // TODO create API call method for formatter (no grounding, different mdo)
   Logger.log("Collecting general company data...");
   const extractedText1 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyInfoPrompt(companyName, companyWebsite), true);
   const geminiJSON1 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyInfoPrompt(extractedText1), false);
@@ -27,8 +25,6 @@ function fillCompany(company, sheet) {
   Logger.log("Collecting company funding info...");
   const extractedText3 = callGeminiAPI("gemini-2.5-pro", getSearchCompanyFundingPrompt(companyName, companyWebsite), true);
   const geminiJSON3 = callGeminiAPI("gemini-2.0-flash", getFormatCompanyFundingPrompt(extractedText3), false);
-
-  Logger.log('Finished search');
 
   if (geminiJSON1) {
     try {
@@ -95,7 +91,6 @@ function getSearchCompanyInfoPrompt(companyName, companyWebsite){
       prompt += `[${value.jsonKey}] ${value.promptInstructions}\n`
     }
   });
-  Logger.log(prompt)
 
   return prompt
 }
@@ -119,7 +114,6 @@ function getSearchCompanyMetricsPrompt(companyName, companyWebsite){
     }
   });
 
-  Logger.log(prompt)
   return prompt
 }
 
@@ -149,7 +143,6 @@ function getSearchCompanyFundingPrompt(companyName, companyWebsite){
       }
     });
   
-  Logger.log(prompt)
 
   return prompt
 
@@ -180,7 +173,6 @@ function getFormatCompanyInfoPrompt(extractedText){
     ${extractedText}
   `
 
-  Logger.log(prompt)
   return prompt
 }
 
@@ -209,7 +201,6 @@ function getFormatCompanyMetricsPrompt(extractedText){
     ${extractedText}
   `
 
-  Logger.log(prompt)
   return prompt
     
 }
@@ -238,7 +229,6 @@ function getFormatCompanyFundingPrompt(extractedText){
     ${extractedText}
   `
 
-  Logger.log(prompt)
   return prompt
 }
 
@@ -299,7 +289,6 @@ function getSynthesizeFinalCompanyPrompt(company) {
     ${JSON.stringify(data)}
     `
 
-  Logger.log(prompt)
   return prompt
 }
 
@@ -331,6 +320,79 @@ function getFormatFinalCompanyPrompt(synthesizedText){
     ${synthesizedText}
   `
 
-  Logger.log(prompt)
   return prompt
+}
+
+function parseAndWriteGeminiOutput(sheet, parsedData, row, company="", final) {
+  const dataRange = sheet.getRange(`A${row}:${finalColumnLetters}${row}`); // Adjust range if needed
+
+  // const numColumns = dataRange.getNumColumns();
+  // const outputRow = new Array(numColumns); // Fills the array with blank strings
+  const outputRow = dataRange.getValues()[0];
+
+
+  // Iterate through the master mapping to decide what to do.
+  for (const fieldName in UNIFIED_MAPPINGS) {
+    const mappingInfo = UNIFIED_MAPPINGS[fieldName];
+    const jsonKey = mappingInfo.jsonKey;
+    const column = mappingInfo.column;
+
+    if (jsonKey in parsedData && column) {
+      const rawValue = parsedData[jsonKey];
+      
+      const formattedValue = formatCellValue(rawValue);
+      
+      const columnIndex = columnLetterToIndex(column);
+
+      // Place the fully formatted string into our output array.
+      outputRow[columnIndex] = formattedValue;
+    }
+  }
+
+  // Write the entire updated row back to the sheet in ONE single API call.
+  dataRange.setValues([outputRow]);
+  
+  // You might want to set wrap strategy for the whole row at once.
+  dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  Logger.log(`Successfully wrote and formatted bulk data to row ${row}.`);
+}
+
+function formatCellValue(value) {
+  const NOT_FOUND = "Undisclosed"; // Use a constant for the default value.
+
+  // Case 1: The value is null or undefined from the start.
+  if (value === null || value === undefined) {
+    return NOT_FOUND;
+  }
+
+  // Case 2: The value is a single object with 'description' and optional 'sources'.
+  if (typeof value === 'object' && !Array.isArray(value) && value.hasOwnProperty('description')) {
+    let description = value.description || NOT_FOUND;
+    let sources = value.sources;
+    
+    let finalCellContent = description;
+
+    if (Array.isArray(sources) && sources.length > 0) {
+      finalCellContent += `\n\nSources:\n${sources.join("\n")}`;
+    }
+    return finalCellContent;
+  }
+  
+  // Case 3: The value is an ARRAY of objects (like for 'Key Differentiators' or 'Risks').
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return NOT_FOUND; // Return "Not found" for empty arrays.
+    }
+    // Use .map() to format each object in the array into its own string block.
+    const itemStrings = value.map(item => {
+      // Recursively call this same function to format each item in the array.
+      // This elegantly handles arrays of objects, or even simple arrays of strings.
+      return formatCellValue(item); 
+    });
+    // Join each formatted block with a double newline for readability.
+    return itemStrings.join('\n\n');
+  } 
+  
+  // Case 4: It's a simple value (string, number, boolean).
+  return value;
 }

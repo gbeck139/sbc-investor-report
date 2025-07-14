@@ -88,7 +88,5 @@ function formatDataForSynthesis(firstRow) {
     }
   };
 
-  // Log the result for debugging and return it
-  Logger.log("Final JSON for Synthesizer:\n" + JSON.stringify(finalJson, null, 2));
   return finalJson;
 }
