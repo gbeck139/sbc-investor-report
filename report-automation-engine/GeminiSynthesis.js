@@ -1,3 +1,7 @@
+/**
+ * Synthesizes data for a list of companies and stores it in the Final Sheet.
+ * @param {string[]} companies - An array of company names to process.
+ */
 function synthesizeData(companies){
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
@@ -8,6 +12,11 @@ function synthesizeData(companies){
   
 }
 
+/**
+ * Creates a new Google Slides presentation from a template and populates it
+ * with data for the specified companies.
+ * @param {string[]} companies - An array of company names to include in the deck.
+ */
 function deckCreation(companies) {
   let spreadsheet= SpreadsheetApp.getActiveSpreadsheet();
   let finalSheet = spreadsheet.getSheetByName(FINAL_SHEET);
@@ -31,7 +40,15 @@ function deckCreation(companies) {
   }
 }
 
-
+/**
+ * Performs the core data synthesis for a single company using the Gemini API.
+ * It reads data from the Master Sheet, sends it to Gemini for synthesis,
+ * and writes the final, reconciled data to the Final Sheet.
+ * @param {Sheet} sheet - The Master Google Sheet.
+ * @param {Sheet} finalSheet - The Final Google Sheet.
+ * @param {string} name - The name of the company to process.
+ * @returns {Object} The final, synthesized data for the company.
+ */
 function geminiSynthesis(sheet, finalSheet, name){
   Logger.log(`Starting synthesis for ${name}`);
   const company = getSingleCompany(sheet, name);
@@ -61,7 +78,12 @@ function geminiSynthesis(sheet, finalSheet, name){
   return finalData
 }
 
-
+/**
+ * Gathers and formats all data for a single company from the Master Sheet
+ * into a structured object suitable for the Gemini synthesis prompt.
+ * @param {number} firstRow - The starting row number for the company's data.
+ * @returns {Object} A structured object containing all the company's data from different sources.
+ */
 function formatDataForSynthesis(firstRow) {
   internalRow = firstRow
   hubspotRow = firstRow+1

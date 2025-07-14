@@ -3,7 +3,12 @@
 
 const COHORT_LIST = {};
 
-
+/**
+ * Serves the initial HTML for the web application.
+ * This function is automatically called when a user visits the web app's URL.
+ * @param {Object} e - The event parameter for a Google Apps Script web app request.
+ * @returns {HtmlOutput} The HTML content to be displayed to the user.
+ */
 function doGet(e) {
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
@@ -12,7 +17,9 @@ function doGet(e) {
 }
 
 /**
- *  Function to get the information from hubspot and create a cohort mapping list
+ * Fetches company data from HubSpot, maps companies to cohorts,
+ * and calculates their starting row in the Google Sheet.
+ * Stores the resulting mappings in Script Properties for later use.
  */
 function mapCompanies() {
   const rowMaps = {}
@@ -37,7 +44,9 @@ function mapCompanies() {
 }
 
 /**
- * Performs any startup commands and return information required for builiding webpage
+ * Performs initial setup tasks when the web app is loaded.
+ * This includes updating the list of cohort folders from Google Drive and mapping companies from HubSpot.
+ * @returns {Object} A dictionary of cohorts and their associated companies, used to populate the UI.
  */
 function getInitialData() {
   updateFolders(DRIVE_IDS);
@@ -46,10 +55,9 @@ function getInitialData() {
 }
 
 /**
- * Function to access the list of folder IDs from the specified (shared) Google Drive.
- * Returns just the top level as that is where a cohorts would be found
- * 
- * @param {List{String}} sharedDriveIds - A list of IDs to search within.
+ * Scans specified Google Drive folders to find and store the IDs of cohort folders.
+ * This is used to locate company update documents later in the process.
+ * @param {string[]} sharedDriveIds - A list of Google Drive IDs to search within.
  */
 function updateFolders(sharedDriveIds = ['0ANlAdFJelSKxUk9PVA']) {
   var pageToken = null;
@@ -159,6 +167,11 @@ function deleteExistingTrigger() {
   }
 }
 
+/**
+ * The core function executed by the time-driven trigger.
+ * It processes one company from the queue stored in Script Properties at a time.
+ * This trigger-based approach avoids exceeding Google Apps Script's execution time limits.
+ */
 function companyTrigger() {
 
   // Gather and parse the infromation to process from the properties
@@ -208,9 +221,18 @@ function companyTrigger() {
 }
 
 /**
- * The MAIN function called by the UI to start all processes.
- * It takes an options object from the frontend.
- * @param {object} options {companies: string[], cohorts: string[] runHubspot: boolean, runPdf: boolean }
+ * The main function called by the UI to start all processes.
+ * It takes an options object from the frontend, saves it to Script Properties,
+ * and creates a time-driven trigger to handle the processing queue.
+ * @param {object} options - An object containing the user's selections from the UI.
+ *   - {string[]} companies: A list of company names to process.
+ *   - {string[]} cohorts: A list of selected cohorts.
+ *   - {boolean} runHubspot: Whether to run the HubSpot import.
+ *   - {boolean} runPdf: Whether to run the PDF analysis.
+ *   - {boolean} runGemini: Whether to run the Gemini web search.
+ *   - {boolean} runSynthesis: Whether to run the data synthesis.
+ *   - {boolean} runDeck: Whether to generate the final slide deck.
+ * @returns {string} A log of the initial actions taken.
  */
 function runProcesses(options) {
   const logOutput = [];

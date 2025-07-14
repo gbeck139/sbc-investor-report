@@ -1,3 +1,12 @@
+/**
+ * Makes a call to the Gemini API with a given prompt and model.
+ * Handles API requests, including grounding (web search) and retries.
+ * @param {string} model - The name of the Gemini model to use (e.g., 'gemini-2.5-pro').
+ * @param {string} prompt - The user prompt to send to the model.
+ * @param {boolean} grounding - Whether to enable grounding (Google Search) for the request.
+ * @returns {string} The text content from the Gemini API response.
+ * @throws {Error} If the API call fails after multiple retries.
+ */
 function callGeminiAPI(model, prompt, grounding) {
   const maxRetries = 3;
   let lastError = null;
@@ -97,6 +106,11 @@ function callGeminiAPI(model, prompt, grounding) {
   throw new Error(`API call failed after ${maxRetries} attempts. Last error: ${lastError.message}`);
 }
 
+/**
+ * Injects citation links into the generated text from the Gemini API.
+ * @param {Object} candidate - The candidate object from the Gemini API response.
+ * @returns {string} The text with added citations.
+ */
 function addCitations(candidate) { 
     let text = candidate.content.parts[0].text;
     const supports = candidate.groundingMetadata?.groundingSupports;
@@ -136,6 +150,11 @@ function addCitations(candidate) {
     return text;
 }
 
+/**
+ * Cleans the raw text response from the Gemini API, removing markdown code fences.
+ * @param {string} rawText - The raw text to clean.
+ * @returns {string} The cleaned text, ready for JSON parsing.
+ */
 function cleanJsonString(rawText) {
   if (!rawText) return "";
 

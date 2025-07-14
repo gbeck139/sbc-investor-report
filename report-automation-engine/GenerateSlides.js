@@ -1,13 +1,9 @@
 
 
 /**
- * Finds and replaces all {{placeholder}} tags throughout an entire Google Slides presentation
- * with values from a provided JSON data object.
- *
- * @param {GoogleAppsScript.Slides.Presentation} presentation The Google Slides presentation object to modify.
- * @param {Object} jsonData The JSON object containing the data to populate. 
- *   Keys in the object should match the placeholder names (without the curly braces).
- *   Example: { name: "My Company", headquarters: "New York" }
+ * Populates a single slide with company data, replacing placeholders and images.
+ * @param {Slide} slide - The Google Slides slide to populate.
+ * @param {Object} jsonData - The JSON object containing the company's data.
  */
 function generateCompanySlideDeck(slide, jsonData) {
 
@@ -39,6 +35,13 @@ function generateCompanySlideDeck(slide, jsonData) {
   Logger.log('Presentation population complete.');
 }
 
+/**
+ * Copies a slide from a source presentation to a destination presentation.
+ * @param {string} sourcePresentationId - The ID of the source presentation.
+ * @param {number} sourceSlideIndex - The index of the slide to copy.
+ * @param {Presentation} destination - The destination presentation object.
+ * @returns {Slide} The newly created slide object.
+ */
 function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destination) { 
   // 1. Open the source and destination presentations
   const sourcePresentation = SlidesApp.openById(sourcePresentationId);
@@ -60,7 +63,12 @@ function copySlideToPresentation(sourcePresentationId, sourceSlideIndex, destina
   return newSlide;
 }
 
-
+/**
+ * Creates a new Google Slides presentation by copying a template.
+ * @param {string} templateId - The ID of the Google Slides template to copy.
+ * @param {string} newFileName - The name for the new presentation file.
+ * @returns {Presentation} The new Google Slides presentation object.
+ */
 function createNewDeckFromTemplate(templateId, newFileName) {
   
   // Create a copy

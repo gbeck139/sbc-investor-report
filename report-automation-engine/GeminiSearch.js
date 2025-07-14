@@ -1,3 +1,8 @@
+/**
+ * Performs a Gemini search for a list of companies, extracting and storing
+ * qualitative, metric, and funding data in the Master Sheet.
+ * @param {string[]} companies - An array of company names to search for.
+ */
 function geminiSearch(companies){
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
@@ -9,6 +14,13 @@ function geminiSearch(companies){
   }
 }
 
+/**
+ * Orchestrates the process of fetching, parsing, and writing data for a single company.
+ * It calls the Gemini API three times for different categories of information,
+ * then parses and writes the results to the specified sheet.
+ * @param {Object} company - The company object containing its name, website, and sheet row.
+ * @param {Sheet} sheet - The Google Sheet to write the data to.
+ */
 function fillCompany(company, sheet) {
   const companyName = company.name;
   const companyWebsite = company.website;
@@ -56,6 +68,7 @@ function fillCompany(company, sheet) {
   Utilities.sleep(1000); // Be mindful of API rate limits
 }
 
+// Generic instructions for the Gemini search prompts.
 const generalSearchInstructions = `
   -  Use your search capabilities to find information for each category with corresponding key listed below.
   -  For each piece of information you find, write it on a new line.
@@ -63,7 +76,7 @@ const generalSearchInstructions = `
   -  If after a thorough search you cannot find information for a category, do not output it.
   -  Do not generate or fabricate information. Every statement must be grounded in a verifiable source.`
 
-
+// Generic instructions for the Gemini formatting prompts.
 const formatInstructions = `
   You are a data formatting expert. Your only task is to convert the provided "Extracted Text" into a perfectly valid, single-line, compact JSON object that strictly adheres to the provided "JSON Schema".
 
@@ -73,7 +86,12 @@ const formatInstructions = `
 
   For each line in the Extracted Text, find the \`[key]\` and use the corresponding information and source URL to populate the correct field in the JSON.`
 
-
+/**
+ * Generates a prompt for Gemini to search for general company information.
+ * @param {string} companyName - The name of the company.
+ * @param {string} companyWebsite - The website of the company.
+ * @returns {string} The generated prompt.
+ */
 function getSearchCompanyInfoPrompt(companyName, companyWebsite){
   prompt = `
     You are a market analyst. Your task is to perform in-depth market research on ${companyName} (${companyWebsite}) and extract key qualitative information.
@@ -95,6 +113,12 @@ function getSearchCompanyInfoPrompt(companyName, companyWebsite){
   return prompt
 }
 
+/**
+ * Generates a prompt for Gemini to search for company key metrics.
+ * @param {string} companyName - The name of the company.
+ * @param {string} companyWebsite - The website of the company.
+ * @returns {string} The generated prompt.
+ */
 function getSearchCompanyMetricsPrompt(companyName, companyWebsite){
   prompt = `
     You are a financial analyst. Your task is to perform in-depth market research on ${companyName} (${companyWebsite}) and extract key performance metrics.
@@ -117,6 +141,12 @@ function getSearchCompanyMetricsPrompt(companyName, companyWebsite){
   return prompt
 }
 
+/**
+ * Generates a prompt for Gemini to search for company funding information.
+ * @param {string} companyName - The name of the company.
+ * @param {string} companyWebsite - The website of the company.
+ * @returns {string} The generated prompt.
+ */
 function getSearchCompanyFundingPrompt(companyName, companyWebsite){
   prompt = `
     You are a venture capital analyst. Your task is to perform in-depth market research on ${companyName} (${companyWebsite}) and extract all relevant fundraising information.
@@ -148,6 +178,11 @@ function getSearchCompanyFundingPrompt(companyName, companyWebsite){
 
 }
 
+/**
+ * Generates a prompt for Gemini to format extracted company info into JSON.
+ * @param {string} extractedText - The raw text extracted from the search.
+ * @returns {string} The generated prompt.
+ */
 function getFormatCompanyInfoPrompt(extractedText){
   prompt = `
     ${formatInstructions}  
@@ -176,6 +211,11 @@ function getFormatCompanyInfoPrompt(extractedText){
   return prompt
 }
 
+/**
+ * Generates a prompt for Gemini to format extracted company metrics into JSON.
+ * @param {string} extractedText - The raw text extracted from the search.
+ * @returns {string} The generated prompt.
+ */
 function getFormatCompanyMetricsPrompt(extractedText){
   prompt = `
     ${formatInstructions}  
@@ -205,6 +245,11 @@ function getFormatCompanyMetricsPrompt(extractedText){
     
 }
 
+/**
+ * Generates a prompt for Gemini to format extracted funding info into JSON.
+ * @param {string} extractedText - The raw text extracted from the search.
+ * @returns {string} The generated prompt.
+ */
 function getFormatCompanyFundingPrompt(extractedText){
   prompt = `
     ${formatInstructions}  
@@ -232,6 +277,11 @@ function getFormatCompanyFundingPrompt(extractedText){
   return prompt
 }
 
+/**
+ * Generates a prompt for Gemini to synthesize all collected data for a company.
+ * @param {Object} company - The company object containing all its collected data.
+ * @returns {string} The generated prompt.
+ */
 function getSynthesizeFinalCompanyPrompt(company) {
 
   data = formatDataForSynthesis(company.sheetRow);
@@ -292,13 +342,18 @@ function getSynthesizeFinalCompanyPrompt(company) {
   return prompt
 }
 
+/**
+ * Generates a prompt for Gemini to format the synthesized company data into JSON.
+ * @param {string} synthesizedText - The raw, synthesized text.
+ * @returns {string} The generated prompt.
+ */
 function getFormatFinalCompanyPrompt(synthesizedText){
   prompt =  `
     You are a data formatting expert. Your only task is to convert the provided "Synthesized Text" into a perfectly valid, single-line, compact JSON object that strictly adheres to the provided "Final JSON Schema".
 
     **CRITICAL OUTPUT INSTRUCTIONS:**
     1.  The entire output must be **only** the raw JSON string.
-    2.  **Do not, under any circumstances, wrap the JSON in markdown code fences like \`\`\`json ... \`\`\` or \`\`\` ... \`\`\`.**
+    2.  **Do not, under any circumstances, wrap the JSON in markdown code fences like \`\`\`json ... \`\`\` or \`\`\` ... \`\`\`**
     3.  Do not add any explanatory text, notes, or any characters before or after the JSON string.
     4.  For each line in the Synthesized Text, find the \`[TAG]\` and use the corresponding information to populate the correct field in the JSON.
 
@@ -323,6 +378,12 @@ function getFormatFinalCompanyPrompt(synthesizedText){
   return prompt
 }
 
+/**
+ * Parses the JSON output from Gemini and writes the data to the specified sheet row.
+ * @param {Sheet} sheet - The Google Sheet to write to.
+ * @param {Object} parsedData - The parsed JSON data from Gemini.
+ * @param {number} row - The row number to write the data to.
+ */
 function parseAndWriteGeminiOutput(sheet, parsedData, row, company="", final) {
   const dataRange = sheet.getRange(`A${row}:${finalColumnLetters}${row}`); // Adjust range if needed
 
@@ -357,6 +418,12 @@ function parseAndWriteGeminiOutput(sheet, parsedData, row, company="", final) {
   Logger.log(`Successfully wrote and formatted bulk data to row ${row}.`);
 }
 
+/**
+ * Formats a cell value for display in the Google Sheet.
+ * Handles single values, objects with descriptions and sources, and arrays of objects.
+ * @param {*} value - The value to format.
+ * @returns {string} The formatted string for the cell.
+ */
 function formatCellValue(value) {
   const NOT_FOUND = "Undisclosed"; // Use a constant for the default value.
 
