@@ -38,6 +38,21 @@ const ROW_SPACING = 3; // Rows to skip between company entries (e.g., if each co
 const finalColumnLetters = "AJ";
 
 
+/**
+ * @description
+ * The UNIFIED_MAPPINGS object is the central configuration hub and single source of truth for all data fields used in this application.
+ * It creates a standardized link between various data sources and destinations, ensuring consistency and simplifying maintenance.
+ *
+ * Each top-level key represents a conceptual data point (e.g., 'Company Summary', 'ARR (Annual Recurring Revenue)').
+ * The nested object for each key defines how that data point is handled across different parts of the system:
+ *
+ * @property {string} column - The Google Sheets column letter where this data is stored (e.g., 'A', 'C', 'AB').
+ * @property {string} jsonKey - The standardized key used for this field in all internal JSON objects. This ensures consistent data handling.
+ * @property {string} [hubspot] - (Optional) The internal name of the corresponding property in the HubSpot API.
+ * @property {string} [promptInstruction] - (Optional) A specific instruction for the Gemini AI to guide its search or synthesis for this field.
+ * @property {string} [searchGroup] - (Optional) Groups related fields together for targeted Gemini API calls (e.g., 'generalInfo', 'keyMetrics', 'funding').
+ * @property {boolean} [isArray] - (Optional) Indicates that the data for this field should be treated as an array of items (e.g., a list of news highlights).
+ */
 const UNIFIED_MAPPINGS = {
     // --- Top-Level Info ---
     'Name': {
