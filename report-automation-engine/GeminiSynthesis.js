@@ -1,23 +1,38 @@
-function synthesizeAndCreateDeck(companies){
+function synthesizeData(companies){
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
   let finalSheet = spreadsheet.getSheetByName(FINAL_SHEET);
-  const templateId = '1ZpZxSyw9GQseP7tSLp5lLcLbSvkAkB45IzIY4g0sF5Q';
 
-  const presentation = createNewDeckFromTemplate(templateId, 'Test');
+  for(const company of companies)
+      data = geminiSynthesis(sheet, finalSheet, company);
+  
+}
 
-  for(const name of companies){
-      data = geminiSynthesis(sheet, finalSheet, name, presentation)
-      const slide = copySlideToPresentation(templateId, 0, presentation);
-      generateCompanySlideDeck(slide, data);
+function deckCreation(companies) {
+  let spreadsheet= SpreadsheetApp.getActiveSpreadsheet();
+  let finalSheet = spreadsheet.getSheetByName(FINAL_SHEET);
+  let sheet = spreadsheet.getSheetByName(MASTER_SHEET);
+  const presentation = createNewDeckFromTemplate(TEMPLATE_ID, 'matt test');
+
+  for(const comp of companies){
+    const company = getSingleCompany(sheet, comp);
+    let finalRow = Math.floor((company.sheetRow-HUBSPOT_ROW)/ROW_SPACING)+COMPANY_UPDATE_ROW;
+
+    const finalData = readRowData(finalSheet, finalRow);
+    finalData['countryFlag'] = getCountryFlag(finalData.logoISO);
+    finalData['companyLogo'] = getCompanyLogo(finalData.website);
+    finalData.reportLink = presentation.getUrl();
+    writeToCell(finalSheet,UNIFIED_MAPPINGS['Report Link'].column, finalRow, finalData.reportLink);
+
+    const slide = copySlideToPresentation(TEMPLATE_ID, 0, presentation);
+    generateCompanySlideDeck(slide, finalData);
+
+    console.log(finalData.reportLink);
   }
 }
 
 
-
-
-
-function geminiSynthesis(sheet, finalSheet, name, presentation){
+function geminiSynthesis(sheet, finalSheet, name){
   Logger.log(`Starting synthesis for ${name}`);
   const company = getSingleCompany(sheet, name);
 
@@ -29,10 +44,19 @@ function geminiSynthesis(sheet, finalSheet, name, presentation){
   parsed = JSON.parse(result);
 
   parseAndWriteGeminiOutput(finalSheet, parsed, finalRow, company);
-  writeToCell(finalSheet, UNIFIED_MAPPINGS['Name'].column, finalRow, company.name);
-  writeToCell(finalSheet, UNIFIED_MAPPINGS['Website'].column, finalRow, company.website);
-  writeToCell(finalSheet, UNIFIED_MAPPINGS['Sector'].column, finalRow, company.sector);
-  writeToCell(finalSheet, UNIFIED_MAPPINGS['Report Link'].column, finalRow, presentation.getUrl());
+  
+  // Copy all important existing data from company to final sheet
+  const fieldsToPreserve = [
+    'Name', 'Website', 'Sector', 'Founding Location'
+  ];
+  
+  for (const fieldName of fieldsToPreserve) {
+    const mapping = UNIFIED_MAPPINGS[fieldName];
+    if (mapping && mapping.jsonKey && company[mapping.jsonKey]) 
+      writeToCell(finalSheet, mapping.column, finalRow, company[mapping.jsonKey]);
+    
+  }
+  
   finalData = readRowData(finalSheet, finalRow);
   return finalData
 }

@@ -22,15 +22,6 @@ function getFounder(companyName){
   }
 
 
-
-
-
-
-
-
-
-
-
   // if (!rowNumber) return {}; // Return empty object if row number is invalid
 
   // // --- Efficiency: Read the entire row's data in one API call ---

@@ -156,10 +156,11 @@ function startProcess() {
     const runHubspotCheckbox = document.getElementById('run-hubspot-script');
     const runPdfCheckbox = document.getElementById('run-pdf-script');
     const runGeminiCheckBox = document.getElementById('run-gemini-script');
-    const runOnePagerCheckBox = document.getElementById('run-onepager-script');
+    const runSynthesisCheckBox = document.getElementById('run-synthesis-script');
+    const runDeckCheckBox = document.getElementById('run-deck-script');
 
     if (!runHubspotCheckbox.checked && !runPdfCheckbox.checked && 
-        !runGeminiCheckBox.checked && !runOnePagerCheckBox.checked) {
+        !runGeminiCheckBox.checked && !runSynthesisCheckBox.checked && !runDeckCheckBox) {
         alert('Please select at least one process to run.');
         return;
     }
@@ -181,7 +182,8 @@ function startProcess() {
         runHubspot: runHubspotCheckbox.checked,
         runPdf: runPdfCheckbox.checked,
         runGemini: runGeminiCheckBox.checked,
-        runOnePager: runOnePagerCheckBox.checked
+        runSynthesis: runSynthesisCheckBox.checked,
+        runDeck: runDeckCheckBox.checked
     };
 
     runBtn.disabled = true;

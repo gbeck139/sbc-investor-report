@@ -273,6 +273,9 @@ function getSynthesizeFinalCompanyPrompt(company) {
       1.  **Recent News and Highlights:** Summarize the company's recent momentum, blending public news with confidential wins.
       2.  **Strategic Focus:** Define the company's current strategic direction, aligned with their fundraising status and product milestones.
       3.  **Risks:** Update internal risks and enhance the analysis by adding relevant external or market risks based on your broad knowledge.
+      4. **Founders:** Verify the founders listed are in fact the founders, and provide at least one founder or co-founder.
+      5. **Founder Commentary:** Utilize any existing quotes if possible, otherwise provide a direct quote from the founder stating their goals and and values for the company.
+      6. **Fund Commentary:** Utilize any exisitng quotes if possible, otherwise generate an analysis for the commentary and utilize information from startupbootcamp, suggesting how they believe the company will provide value.
 
     ---
     **Part 3: Output Instructions**

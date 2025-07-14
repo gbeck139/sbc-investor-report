@@ -78,7 +78,7 @@ function updateFolders(sharedDriveIds = ['0ANlAdFJelSKxUk9PVA']) {
             folders.push(parentFolder.getId());
 
           } catch (e) {
-            Logger.log(`Error processing folder ${folderObj.name}: ${e.message}`);
+            console.log(`Error processing folder ${folderObj.name}: ${e.message}`);
             continue;
           }
         }
@@ -130,12 +130,12 @@ function createMinuteTrigger() {
       .everyMinutes(1)
       .create();
 
-    Logger.log(`Successfully created a trigger for ${TARGET_FUNCTION_NAME} to run every minute.`);
+    console.log(`Successfully created a trigger for ${TARGET_FUNCTION_NAME} to run every minute.`);
     // This return value can be sent back to your web app's success handler.
     return `Success: Trigger created for ${TARGET_FUNCTION_NAME}.`;
 
   } catch (e) {
-    Logger.log(`Error creating trigger: ${e.toString()}`);
+    console.log(`Error creating trigger: ${e.toString()}`);
     // This error will be sent back to your web app's failure handler.
     throw new Error(`Failed to create trigger. Error: ${e.message}`);
   }
@@ -151,58 +151,60 @@ function deleteExistingTrigger() {
     for (const trigger of allTriggers) {
       if (trigger.getHandlerFunction() === TARGET_FUNCTION_NAME) {
         ScriptApp.deleteTrigger(trigger);
-        Logger.log(`Deleted pre-existing trigger with ID: ${trigger.getUniqueId()}`);
+        console.log(`Deleted pre-existing trigger with ID: ${trigger.getUniqueId()}`);
       }
     }
   } catch (e) {
-    Logger.log(`Error deleting trigger: ${e.toString()}`);
-    // We don't throw an error here because failing to delete an old trigger
-    // shouldn't necessarily stop the creation of a new one.
+    console.log(`Error deleting trigger: ${e.toString()}`);
   }
 }
 
 function companyTrigger() {
 
   // Gather and parse the infromation to process from the properties
-  const options = JSON.parse(SCRIPT_PROPS.getProperty('PROCESS_QUEUE'));
+  const options = JSON.parse(SCRIPT_PROPS.getProperty('PROCESS_QUEUE')); 
+  let workingOps = options[0];
+  let comps = workingOps.companies;
 
+  console.log(`Process Queue: Working on ${comps}.`)
 
-  const comps = options.companies;
-  // Upon the completion of all processes, delete the trigger and finish
-  if (comps.length === 0) {
-    deleteExistingTrigger();
-    return;
-  }
-
-  // Select just one company for now
+  // Select just one company for now and update the settings
   const company = comps.splice(0, 1);
+  options[0].companies = comps;
 
-  console.log(company, comps);
+
+  // If on the last company, move on to the next process or delete it all and finish
+  if (comps.length === 0) 
+    if (options.length === 1){
+      deleteExistingTrigger();
+      SCRIPT_PROPS.deleteProperty('PROCESS_QUEUE');
+    } else      
+      options.splice(0,1);  // Set up the next round to start the new processes
 
   // Relog the options with one company removed
-  options.companies = comps;
-  SCRIPT_PROPS.setProperty('PROCESS_QUEUE', JSON.stringfiy(options));
+  SCRIPT_PROPS.setProperty('PROCESS_QUEUE', JSON.stringify(options));
 
   // Run the selected methods for the controlled amount of companies passed by triggers
-  if (options.runPdf) {
+  if (workingOps.runPdf) {
     console.log("Grant will look into it");
-    analyzePDFs(company, options.cohorts);
+
+    analyzePDFs(company);
   }
 
-  if (options.runGemini) {
-    console.log("You totally ran gemini")
+  if (workingOps.runGemini) {
+    console.log("You totally ran gemini");
 
     geminiSearch(company);
-
   }
-  if (options.runOnePager) {
+  if (workingOps.runSynthesis) {
+    console.log("Grant got cream cheese on the motherboard sorry!!");
 
-    console.log("Grant got cream cheese on the motherboard sorry!!")
-
-    synthesizeAndCreateDeck(company);
+    synthesizeData(company);
   }
 
-
+  // Check for the final company to create a deck if needed
+  if (comps.length === 0 && workingOps.runDeck)
+      deckCreation(workingOps.deck)
 }
 
 /**
@@ -212,26 +214,39 @@ function companyTrigger() {
  */
 function runProcesses(options) {
   const logOutput = [];
+
   try {
     logOutput.push("Process started on the server...");
 
-    // --- Run HubSpot Import if selected ---
+    // Run HubSpot Import if selected 
     if (options.runHubspot) {
       logOutput.push("\n--- Running HubSpot Import ---");
 
       createSheets(options.companies);
     }
 
-    // Check for already existing run options and update them.
-    const oldOptions = JSON.parse(SCRIPT_PROPS.getProperty('PROCESS_QUEUE'));
+    // If only running hubspot and a deck, skip the trigger mechanism
+    if (!options.runGemini && !options.runSynthesis && !options.runPdf){
+      if (options.runDeck)
+        deckCreation(options.companies);
+              
+      console.log(`Processes finished, returning before trigger creation`);
+      return;
+    }
 
-    oldOptions.companies.concat(options.companies);
-    oldOptions.runPdf = oldOptions.runPdf || options.runPdf;
-    oldOptions.runGemini = oldOptions.runGemini || options.runGemini;
-    oldOptions.runOnePager = oldOptions.runOnePager || options.runOnePager;
+    // If running a deck, save which companies to do it for.
+    if(options.runDeck)
+      options['deck'] = options.companies;
 
-    // Store the options we want to process
-    SCRIPT_PROPS.setProperty('PROCESS_QUEUE', JSON.stringify(oldOptions));
+    // Initilize options to the old list, or a new empty one
+    let oldOps = SCRIPT_PROPS.getProperty('PROCESS_QUEUE');
+    oldOps = oldOps ? JSON.parse(oldOps) : [];
+
+    // Add the new operations and store them
+    oldOps = oldOps.concat([options]);
+    let opsString = JSON.stringify(oldOps);
+    SCRIPT_PROPS.setProperty('PROCESS_QUEUE', opsString);
+    console.log(opsString);
 
     //Start triggering company selections which will scrape from script props
     createMinuteTrigger();

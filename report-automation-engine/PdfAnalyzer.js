@@ -14,9 +14,7 @@
 // ----TODO----
 /*
 
-Attempt to grab any pdf within the last 6 months
-
-Google slide/ .pptx / docs / sheets/ excel 
+Google slide/ .pptx / docs / sheets/ excel -> Docs Doesn't get read - Tell Trev
 to read in
 
 create "working" docs on how to use and maintain the drive
@@ -41,7 +39,7 @@ const cohortFolders = JSON.parse(SCRIPT_PROPS.getProperty(`COHORT_FOLDERS`));
 /**
  * Main function to initiate the PDF extraction process.
  */
-function analyzePDFs(updateCompanies = ['Xempla'], updateCohorts = ['EA18']) {
+function analyzePDFs(updateCompanies = ['Xempla']) {
   const companyPDFs = {};
 
   // Use Drive API to search for company update folders directly

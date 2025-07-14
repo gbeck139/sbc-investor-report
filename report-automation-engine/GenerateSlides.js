@@ -31,10 +31,9 @@ function generateCompanySlideDeck(slide, jsonData) {
   // Update the images
   for(const img of slide.getImages()){
     const blob = jsonData[img.getDescription()];
-    if(blob)
-      img.replace(jsonData[img.getDescription()]);
-    else
-      img.remove();
+    
+    // If we have a blob, use it, otherwise remove it!
+    blob ? img.replace(jsonData[img.getDescription()]) : img.remove();
   }
 
   Logger.log('Presentation population complete.');

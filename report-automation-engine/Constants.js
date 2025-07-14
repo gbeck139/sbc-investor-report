@@ -25,6 +25,7 @@ function getGeminiApiKey() {
 
 // --- Drive Config ---
 const DRIVE_IDS = ['0ANlAdFJelSKxUk9PVA'];
+const TEMPLATE_ID = '1ZpZxSyw9GQseP7tSLp5lLcLbSvkAkB45IzIY4g0sF5Q';  
 
 // --- Sheet Configuration ---
 const MASTER_SHEET = 'Master Sheet'; // Name of the sheet to update/create
@@ -63,13 +64,16 @@ const UNIFIED_MAPPINGS = {
         hubspot: 'country__2',
         jsonKey: 'foundingLocation'
     },
-    'Company Logo': {
-        column: 'AI',
-        jsonKey: 'companyLogo'
+    'Logo ISO': {
+        column: 'AJ',
+        jsonKey: 'logoISO',
+        promptInstruction: 'Convert the Founding Location to an ISO 3166-1 alpha-2 country code (2 letters) (e.g., "US", "GB", "CA")'
     },
     'Founders': {
-        column: 'AJ',
-        jsonKey: 'founders'
+        column: 'AI',
+        jsonKey: 'founders',
+        promptInstruction: 'The founder or a list of co-founders of the company',
+        searchGroup: 'generalInfo'
     },
 
     // --- Qualitative Analysis ---
@@ -268,6 +272,4 @@ const UNIFIED_MAPPINGS = {
         jsonKey: 'reportLink'
     },
 };
-
-
 
