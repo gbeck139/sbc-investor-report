@@ -1,4 +1,13 @@
 /**
+ * A dedicated script for making calls to the Gemini API.
+ * This script handles API requests, including grounding (web search) and retries.
+ * 
+ * Grant Beck
+ * SBC Australia
+ * 12/06/2025
+ */
+
+/**
  * Makes a call to the Gemini API with a given prompt and model.
  * Handles API requests, including grounding (web search) and retries.
  * @param {string} model - The name of the Gemini model to use (e.g., 'gemini-2.5-pro').

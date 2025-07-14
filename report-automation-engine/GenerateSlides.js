@@ -1,6 +1,16 @@
 
 
 /**
+ * Automation to generate Google Slides presentations from a template, populated with company data.
+ * This script is used to create one-page investor reports for alumni companies.
+ * 
+ * Grant Beck
+ * SBC Australia
+ * 07/07/2025
+ */
+
+
+/**
  * Populates a single slide with company data, replacing placeholders and images.
  * @param {Slide} slide - The Google Slides slide to populate.
  * @param {Object} jsonData - The JSON object containing the company's data.

@@ -1,5 +1,14 @@
 
 /**
+ * A utility script for retrieving founder information from the 'Founders' sheet.
+ * 
+ * Grant Beck
+ * SBC Australia
+ * 08/07/2025
+ */
+
+
+/**
  * Retrieves the founder's name for a given company from the 'Founders' sheet.
  * @param {string} companyName - The name of the company to search for.
  * @returns {string|null} The name of the founder, or null if the company is not found.

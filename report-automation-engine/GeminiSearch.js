@@ -1,4 +1,13 @@
 /**
+ * Automation to perform web searches using the Gemini API to gather public information about companies.
+ * This script is used to collect data for the investor reports.
+ * 
+ * Grant Beck
+ * SBC Australia
+ * 12/06/2025
+ */
+
+/**
  * Performs a Gemini search for a list of companies, extracting and storing
  * qualitative, metric, and funding data in the Master Sheet.
  * @param {string[]} companies - An array of company names to search for.

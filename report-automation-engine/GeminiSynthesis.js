@@ -1,4 +1,14 @@
 /**
+ * Automation to synthesize data from multiple sources into a single, coherent view.
+ * This script uses the Gemini API to analyze and reconcile data from HubSpot, Google Drive, and web searches.
+ * The synthesized data is then used to generate investor reports.
+ * 
+ * Grant Beck
+ * SBC Australia
+ * 20/06/2025
+ */
+
+/**
  * Synthesizes data for a list of companies and stores it in the Final Sheet.
  * @param {string[]} companies - An array of company names to process.
  */
