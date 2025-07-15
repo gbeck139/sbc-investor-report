@@ -44,7 +44,6 @@ The project is organized into several script files, each responsible for a speci
 *   **`GenerateSlides.js`:** Populates the Google Slides template with the synthesized data to generate the final one-page reports.
 *   **`Founders.js`:** A utility script for retrieving founder information.
 *   **`Utilities.js`:** Contains helper functions used by other scripts in the project.
-*   **`Test.js`:** Includes test functions for development and debugging purposes.
 *   **`geminiAPI.js`:** A dedicated script for making calls to the Gemini API.
 
 ## Getting Started
